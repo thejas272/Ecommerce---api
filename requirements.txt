@@ -1,0 +1,14 @@
+Django>=4.2,<5.0
+djangorestframework>=3.14,<4.0
+
+# JWT Authentication
+djangorestframework-simplejwt>=5.3,<6.0
+
+# Swagger / OpenAPI
+drf-yasg>=1.21,<2.0
+
+# PostgreSQL
+psycopg2-binary>=2.9,<3.0
+
+# Environment variables
+python-dotenv>=1.0,<2.0

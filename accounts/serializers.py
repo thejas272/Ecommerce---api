@@ -86,6 +86,29 @@ class LoginSerializer(serializers.Serializer):
         return attrs
 
 
+
+class LogoutSerializer(serializers.Serializer):
+    refresh = serializers.CharField(required=True)
+
+    def validate(self, attrs):
+        token = attrs.get("refresh")
+
+        try:
+            self.token = RefreshToken(token)
+        except TokenError:
+            raise serializers.ValidationError("Invalid or expired refresh token.")
+        
+        if self.token.token_type != "refresh":
+            raise serializers.ValidationError("Invalid token type.")
+        
+        return attrs
+    
+    def save(self, **kwargs):
+        self.token.blacklist()
+
+
+
+
 class RefreshTokenSerializer(serializers.Serializer):
     refresh = serializers.CharField(required=True)
 

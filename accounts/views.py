@@ -48,7 +48,21 @@ class LoginAPIView(GenericAPIView):
                                 )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
+
+class LogoutAPIView(GenericAPIView):
+    permission_classes = [AllowAny]
+    serializer_class = serializers.LogoutSerializer
+    @swagger_auto_schema(tags=['Authentication'])
     
+    def post(self,request):
+        serializer = self.serializer_class(data=request.data)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        
+        return Response(status=status.HTTP_400_BAD_REQUEST)
 
 
 
