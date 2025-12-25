@@ -6,17 +6,18 @@ from rest_framework.permissions import AllowAny
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from drf_yasg.utils import swagger_auto_schema
+from accounts.throttles import LoginRateThrottle, RefreshTokenRateThrottle
+
 
 # Create your views here.
 
 
 
 class RegisterAPIView(GenericAPIView):
-
     permission_classes = [AllowAny]
     serializer_class = serializers.RegsiterSerializer
-    @swagger_auto_schema(tags=['Authentication'])
 
+    @swagger_auto_schema(tags=['Authentication'])
     def post(self,request):
 
         serializer = self.serializer_class(data=request.data)
@@ -31,9 +32,10 @@ class RegisterAPIView(GenericAPIView):
 
 class LoginAPIView(GenericAPIView):
     permission_classes = [AllowAny]
+    throttle_classes = [LoginRateThrottle]
     serializer_class = serializers.LoginSerializer
-    @swagger_auto_schema(tags=['Authentication'])
 
+    @swagger_auto_schema(tags=['Authentication'])
     def post(self,request):
         serializer = self.serializer_class(data=request.data)
 
@@ -53,8 +55,8 @@ class LoginAPIView(GenericAPIView):
 class LogoutAPIView(GenericAPIView):
     permission_classes = [AllowAny]
     serializer_class = serializers.LogoutSerializer
+
     @swagger_auto_schema(tags=['Authentication'])
-    
     def post(self,request):
         serializer = self.serializer_class(data=request.data)
 
@@ -68,9 +70,10 @@ class LogoutAPIView(GenericAPIView):
 
 class RefreshTokenAPIView(GenericAPIView):
     permission_classes = [AllowAny]
+    throttle_classes = [RefreshTokenRateThrottle]
     serializer_class = serializers.RefreshTokenSerializer
-    @swagger_auto_schema(tags=['Authentication'])
 
+    @swagger_auto_schema(tags=['Authentication'])
     def post(self, request):
         serializer = self.serializer_class(data=request.data)
 
@@ -82,3 +85,49 @@ class RefreshTokenAPIView(GenericAPIView):
                             status=status.HTTP_200_OK)
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+
+class ProfileApiView(GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class   = serializers.ProfileSerializer
+
+    @swagger_auto_schema(tags=['User'])
+    def get(self,request):
+        serializer = self.serializer_class(request.user)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+
+
+class UpdateProfileAPIView(GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = serializers.UpdateProfileSerializer
+
+    @swagger_auto_schema(tags=['User'])
+    def patch(self,request):
+        serializer = self.serializer_class(request.user, data=request.data, partial=True)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+    
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+
+
+class UpdatePasswordAPIView(GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = serializers.UpdatePasswordSerializer
+
+    @swagger_auto_schema(tags=['User'])
+    def patch(self,request):
+        serializer = self.serializer_class(request.user, data=request.data, context={"request":request})
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"detail":"Password changed successfully."},status=status.HTTP_200_OK)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+
+    

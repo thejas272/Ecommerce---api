@@ -1,9 +1,10 @@
 from rest_framework import serializers
 from accounts import models
-from django.db import IntegrityError
+from django.db import IntegrityError,transaction
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken,TokenError
 import re
+from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, BlacklistedToken
 
 
 class RegsiterSerializer(serializers.ModelSerializer):
@@ -53,13 +54,14 @@ class RegsiterSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
 
         try:
-            user = models.User.objects.create_user(first_name = validated_data['first_name'],
-                                                   last_name  = validated_data['last_name'],
-                                                   username   = validated_data['username'],
-                                                   password   = validated_data['password'],
-                                                   email      = validated_data['email'],
-                                                   )
-            return user
+            with transaction.atomic():
+                user = models.User.objects.create_user(first_name = validated_data['first_name'],
+                                                       last_name  = validated_data['last_name'],
+                                                       username   = validated_data['username'],
+                                                       password   = validated_data['password'],
+                                                       email      = validated_data['email'],
+                                                      )
+                return user
         
         except IntegrityError:
             raise serializers.ValidationError({"detail":"Username or email already taken."})
@@ -138,3 +140,99 @@ class RefreshTokenSerializer(serializers.Serializer):
         
         return attrs
     
+
+
+class ProfileSerializer(serializers.ModelSerializer):
+    
+    class Meta:
+        model = models.User
+        fields = ["id","username","email","first_name","last_name","is_staff","is_staff","date_joined"]
+
+
+
+
+
+class UpdateProfileSerializer(serializers.ModelSerializer):
+    username   = serializers.CharField(max_length=30)
+    first_name = serializers.CharField(max_length=30)
+    last_name  = serializers.CharField(max_length=30) 
+    
+    class Meta:
+        model = models.User
+        fields = ["username","email","first_name","last_name"]
+
+    def validate_username(self,value):
+        if not re.match(r'^[A-Za-z0-9_]+$',value):
+            raise serializers.ValidationError("Username can only contain letters, number, and underscores.")
+        
+        if models.User.objects.filter(username=value).exclude(id=self.instance.id).exists():
+            raise serializers.ValidationError("Username already taken.")
+        return value
+    
+    def validate_email(self,value):
+        value = value.lower()
+        if models.User.objects.filter(email__iexact=value).exclude(id=self.instance.id).exists():
+            raise serializers.ValidationError("Email already taken.")
+
+        return value
+    
+    def validate_first_name(self,value):
+        if not re.fullmatch(r'[A-Za-z]+',value):
+            raise serializers.ValidationError("First name can only contain letters.")
+        return value
+    
+    def validate_last_name(self,value):
+        if not re.fullmatch(r'[A-Za-z]+( [A-Za-z]+)*',value):
+            raise serializers.ValidationError("Last name must only contain letters and spaces.")
+        return value
+    
+    def validate(self, attrs):
+        return attrs
+    
+
+    def update(self, instance, validated_data):
+        try:
+            with transaction.atomic():
+                return super().update(instance, validated_data)
+        except IntegrityError:
+            raise serializers.ValidationError({"detail":"Username or email already taken."})
+        
+
+
+
+class UpdatePasswordSerializer(serializers.ModelSerializer):
+    old_password     = serializers.CharField(write_only=True, required=True)
+    new_password     = serializers.CharField(write_only=True, required=True, min_length=8)
+    confirm_password = serializers.CharField(write_only=True, required=True, min_length=8) 
+
+    class Meta:
+        model = models.User
+        fields = ["old_password","new_password","confirm_password"]
+
+    def validate(self, attrs):
+        request = self.context['request']
+        user = request.user
+
+        if not user.check_password(attrs["old_password"]):
+            raise serializers.ValidationError({"old_password":"Current password is incorrect."})
+
+        if attrs["new_password"] != attrs["confirm_password"]:
+            raise serializers.ValidationError({"confirm_password":"Passwords do not match."})
+
+        return attrs
+    
+    def save(self, **kwargs):
+        user = self.context["request"].user
+        new_password = self.validated_data["new_password"]
+
+        with transaction.atomic():
+            user.set_password(new_password)
+            user.save()
+
+            refresh_tokens = OutstandingToken.objects.filter(user=user)
+
+            for token in refresh_tokens:
+                BlacklistedToken.objects.get_or_create(token=token)
+        
+
+
