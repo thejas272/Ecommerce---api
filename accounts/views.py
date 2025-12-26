@@ -2,8 +2,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from accounts import serializers
 from rest_framework.generics import GenericAPIView
-from rest_framework.permissions import AllowAny
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny,IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from drf_yasg.utils import swagger_auto_schema
 from accounts.throttles import LoginRateThrottle, RefreshTokenRateThrottle
@@ -87,30 +86,29 @@ class RefreshTokenAPIView(GenericAPIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
 
+
 class ProfileApiView(GenericAPIView):
     permission_classes = [IsAuthenticated]
-    serializer_class   = serializers.ProfileSerializer
+    
+    def get_serializer_class(self):
+        if self.request.method == "PATCH":
+            return serializers.UpdateProfileSerializer
+        return serializers.ProfileSerializer
+        
 
     @swagger_auto_schema(tags=['User'])
     def get(self,request):
-        serializer = self.serializer_class(request.user)
+        serializer = self.get_serializer(request.user)
 
         return Response(serializer.data, status=status.HTTP_200_OK)
     
-
-
-class UpdateProfileAPIView(GenericAPIView):
-    permission_classes = [IsAuthenticated]
-    serializer_class = serializers.UpdateProfileSerializer
-
     @swagger_auto_schema(tags=['User'])
     def patch(self,request):
-        serializer = self.serializer_class(request.user, data=request.data, partial=True)
-
+        serializer = self.get_serializer(request.user, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
-    
+        
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
 
