@@ -19,16 +19,19 @@ class RegsiterSerializer(serializers.ModelSerializer):
         fields = ["first_name","last_name","username","password","email"]
     
     def validate_first_name(self, value):
+        value = value.strip()
         if not re.fullmatch(r"[A-Za-z]+",value):
             raise serializers.ValidationError("First name must only contain letters.")
         return value
     
     def validate_last_name(self, value):
+        value = value.strip()
         if not re.fullmatch(r"[A-Za-z]+( [A-Za-z]+)*", value.strip()):
             raise serializers.ValidationError("Last name must only contain letters and spaces.")
         return value
     
     def validate_username(self, value):
+        value = value.strip()
         if not re.match(r'^[A-Za-z0-9_]+$', value):
             raise serializers.ValidationError("Username can only contain letters, numbers, and underscores.")
         

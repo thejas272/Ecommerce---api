@@ -1,4 +1,6 @@
 from django.db import models
+from django.utils.text import slugify
+
 
 # Create your models here.
 
@@ -16,6 +18,13 @@ class CategoryModel(models.Model):
         return f"{self.name} - {self.is_active}" 
     
 
+    def save(self,*args,**kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)
+        
+        return super().save(*args,**kwargs)
+    
+
     
 
 class BrandModel(models.Model):
@@ -29,6 +38,13 @@ class BrandModel(models.Model):
 
     def __str__(self):
         return f"{self.name} - {self.is_active}"
+    
+    def save(self,*args,**kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)
+        
+        return super().save(*args,**kwargs)
+    
 
 
 
@@ -50,3 +66,10 @@ class ProductModel(models.Model):
 
     def __str__(self):
         return f"{self.name} - {self.category.name} - {self.brand.name}"
+    
+
+    def save(self,*args,**kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)
+        
+        return super().save(*args,**kwargs)
