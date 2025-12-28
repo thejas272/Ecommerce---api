@@ -20,13 +20,14 @@ class DefaultPagination(PageNumberPagination):
     page_size_query_param = "page_size"
 
 
+# --------------Categories-------------
 
 class CategoryCreateAPIView(GenericAPIView):
     permission_classes = [IsAuthenticated,DjangoModelPermissions]
     serializer_class = serializers.CategoryCreateSerializer
     queryset = models.CategoryModel.objects.all()
 
-    @swagger_auto_schema(tags=["Products"])
+    @swagger_auto_schema(tags=["Categories"])
     def post(self,request):
         serializer = self.serializer_class(data=request.data)
         
@@ -38,16 +39,12 @@ class CategoryCreateAPIView(GenericAPIView):
 
 
 
-
-
-
-
 class CategoryListAPIView(GenericAPIView):
     permission_classes = [AllowAny]
     serializer_class = serializers.CategoryListSerializer
     pagination_class = DefaultPagination
 
-    @swagger_auto_schema(tags=['Products'])
+    @swagger_auto_schema(tags=['Categories'])
     def get(self,request):
         categories = models.CategoryModel.objects.filter(is_active=True)
 
@@ -59,12 +56,76 @@ class CategoryListAPIView(GenericAPIView):
         return paginator.get_paginated_response(serializer.data)
     
 
+
+
+class CategoryDetailAPIView(GenericAPIView):
+    permission_classes = [AllowAny]
+    serializer_class = serializers.CategoryDetailSerializer
+    lookup_field = "slug"
+
+    @swagger_auto_schema(tags=['Categories'])
+    def get(self,request,slug):
+        category = get_object_or_404(models.CategoryModel, slug=slug, is_active=True)
+
+        serializer = self.serializer_class(category)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+
+
+class CategoryUpdateDeleteAPIView(GenericAPIView):
+    permission_classes = [IsAuthenticated, DjangoModelPermissions]
+    serializer_class = serializers.CategoryUpdateSerializer
+    queryset = models.CategoryModel.objects.all()
+    lookup_field = "id"
+
+    @swagger_auto_schema(tags=["Categories"])
+    def patch(self,request,id):
+        category = get_object_or_404(models.CategoryModel, id=id, is_active=True)
+
+        serializer = self.serializer_class(category, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+
+    @swagger_auto_schema(tags=["Categories"])
+    def delete(self,request,id):
+        category = get_object_or_404(models.CategoryModel, id=id, is_active=True)
+
+        category.is_active = False
+        category.save()
+
+        return Response({"detail":"Category deleted successfully."},status=status.HTTP_200_OK)
+
+# ---------------BRANDS------------------
+
+
+
+class BrandCreateAPIView(GenericAPIView):
+    permission_classes = [IsAuthenticated,DjangoModelPermissions]
+    serializer_class = serializers.BrandCreateSerializer
+    queryset = models.BrandModel.objects.all()
+
+    @swagger_auto_schema(tags=['Brands'])
+    def post(self,request):
+        serializer = self.serializer_class(data=request.data)
+        
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
 class BrandListAPIView(GenericAPIView):
     permission_classes = [AllowAny]
     serializer_class = serializers.BrandListSerializer
     pagination_class = DefaultPagination
 
-    @swagger_auto_schema(tags=["Products"])
+    @swagger_auto_schema(tags=["Brands"])
     def get(self,request):
         brands = models.BrandModel.objects.filter(is_active=True)
 
@@ -74,7 +135,73 @@ class BrandListAPIView(GenericAPIView):
         serializer = self.serializer_class(page, many=True)
 
         return paginator.get_paginated_response(serializer.data)
+
+
+
+class BrandDetailAPIView(GenericAPIView):
+    permission_classes = [AllowAny]
+    serializer_class = serializers.BrandDetailSerializer
+    lookup_field = "slug"
+
+    @swagger_auto_schema(tags=['Brands'])
+    def get(self,request,slug):
+        brand = get_object_or_404(models.BrandModel, slug=slug, is_active=True)
+
+        serializer = self.serializer_class(brand)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+
+
+class BrandDeleteUpdateAPIView(GenericAPIView):
+    permission_classes = [IsAuthenticated, DjangoModelPermissions]
+    serializer_class = serializers.BrandUpdateSerializer
+    queryset = models.BrandModel.objects.all()
+    lookup_field = "id"
+
+    @swagger_auto_schema(tags=["Brands"])
+    def patch(self,request,id):
+        brand = get_object_or_404(models.BrandModel, id=id, is_active=True)
+
+        serializer = self.serializer_class(brand, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+    @swagger_auto_schema(tags=["Brands"])
+    def delete(self,request,id):
+        brand = get_object_or_404(models.BrandModel, id=id, is_active=True)
+
+        brand.is_active = False
+        brand.save()
+
+        return Response({"detail":"Brand deleted successfully"}, status=status.HTTP_200_OK)
     
+
+
+
+# ------------ PRODUCTS ---------------
+
+
+class ProductCreateAPIView(GenericAPIView):
+    permission_classes = [IsAuthenticated,DjangoModelPermissions]
+    serializer_class = serializers.ProductCreateSerializer
+    queryset = models.ProductModel.objects.all()
+
+    @swagger_auto_schema(tags=["Products"])
+    def post(self,request):
+        serializer = self.serializer_class(data=request.data)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+
 
 class ProductListAPIView(GenericAPIView):
     permission_classes = [AllowAny]
@@ -148,36 +275,6 @@ class ProductListAPIView(GenericAPIView):
         serializer = self.serializer_class(page, many=True)
 
         return paginator.get_paginated_response(serializer.data)
-
-
-
-
-
-class CategoryDetailAPIView(GenericAPIView):
-    permission_classes = [AllowAny]
-    serializer_class = serializers.CategoryDetailSerializer
-    lookup_field = "slug"
-
-    @swagger_auto_schema(tags=['Products'])
-    def get(self,request,slug):
-        category = get_object_or_404(models.CategoryModel, slug=slug, is_active=True)
-
-        serializer = self.serializer_class(category)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-    
-
-
-class BrandDetailAPIView(GenericAPIView):
-    permission_classes = [AllowAny]
-    serializer_class = serializers.BrandDetailSerializer
-    lookup_field = "slug"
-
-    @swagger_auto_schema(tags=['Products'])
-    def get(self,request,slug):
-        brand = get_object_or_404(models.BrandModel, slug=slug, is_active=True)
-
-        serializer = self.serializer_class(brand)
-        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 

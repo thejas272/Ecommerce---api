@@ -8,5 +8,13 @@ urlpatterns = [
 
     path('categories/{slug}', views.CategoryDetailAPIView.as_view(), name="category-detail"),
     path('brands/{slug}', views.BrandDetailAPIView.as_view(), name="brand-detail"),
-    path('products/{slug}', views.ProductDetailAPIView.as_view(), name="product-detail"),
+    path('{slug}', views.ProductDetailAPIView.as_view(), name="product-detail"),
+
+    path('admin/categories/', views.CategoryCreateAPIView.as_view(), name="category-create"),
+    path('admin/brands/', views.BrandCreateAPIView.as_view(), name="brand-create"),
+    path('admin/products/', views.ProductCreateAPIView.as_view(), name="product-create"),
+
+    path('admin/categories/<int:id>', views.CategoryUpdateDeleteAPIView.as_view(), name="category-delete-update"),
+    path('admin/brands/<int:id>', views.BrandDeleteUpdateAPIView.as_view(), name="brand-delete-update"),
+
 ]

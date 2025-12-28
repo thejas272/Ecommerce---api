@@ -50,7 +50,7 @@ class BrandModel(models.Model):
 
 
 class ProductModel(models.Model):
-    name     = models.CharField(max_length=200, unique=True, null=False, blank=False)
+    name     = models.CharField(max_length=200, null=False, blank=False)
     category = models.ForeignKey(CategoryModel, related_name='products', on_delete=models.PROTECT, null=False, blank=False)
     brand    = models.ForeignKey(BrandModel, related_name='products', on_delete=models.PROTECT, null=False, blank=False)  
     slug     = models.SlugField(max_length=120, unique=True)
@@ -66,6 +66,13 @@ class ProductModel(models.Model):
 
     def __str__(self):
         return f"{self.name} - {self.category.name} - {self.brand.name}"
+    
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields = ["name","brand"],
+                                               name="unique_product_name_per_brand"
+                                              )
+                      ]
     
 
     def save(self,*args,**kwargs):
