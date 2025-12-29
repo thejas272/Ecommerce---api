@@ -11,6 +11,7 @@ from rest_framework.pagination import PageNumberPagination
 from decimal import Decimal, InvalidOperation
 from django.db.models import Q
 from rest_framework.permissions import DjangoModelPermissions
+from rest_framework.exceptions import NotFound
 # Create your views here.
 
 
@@ -65,7 +66,10 @@ class CategoryDetailAPIView(GenericAPIView):
 
     @swagger_auto_schema(tags=['Categories'])
     def get(self,request,slug):
-        category = get_object_or_404(models.CategoryModel, slug=slug, is_active=True)
+        try:
+            category = models.CategoryModel.objects.get(slug=slug, is_active=True)
+        except models.CategoryModel.DoesNotExist:
+            raise NotFound("Category does not exist.")
 
         serializer = self.serializer_class(category)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -80,7 +84,10 @@ class CategoryUpdateDeleteAPIView(GenericAPIView):
 
     @swagger_auto_schema(tags=["Categories"])
     def patch(self,request,id):
-        category = get_object_or_404(models.CategoryModel, id=id, is_active=True)
+        try:
+            category = models.CategoryModel.objects.get(id=id)
+        except models.CategoryModel.DoesNotExist:
+            raise NotFound("Category does not exist.")
 
         serializer = self.serializer_class(category, data=request.data, partial=True)
         if serializer.is_valid():
@@ -92,12 +99,16 @@ class CategoryUpdateDeleteAPIView(GenericAPIView):
 
     @swagger_auto_schema(tags=["Categories"])
     def delete(self,request,id):
-        category = get_object_or_404(models.CategoryModel, id=id, is_active=True)
+        try:
+            category = models.CategoryModel.objects.get(id=id, is_active=True)
+        except models.CategoryModel.DoesNotExist:
+            raise NotFound("Category does not exist.") 
 
         category.is_active = False
         category.save()
 
-        return Response({"detail":"Category deleted successfully."},status=status.HTTP_200_OK)
+        return Response({"detail":"Category deleted successfully."},status=status.HTTP_204_NO_CONTENT)
+
 
 # ---------------BRANDS------------------
 
@@ -145,11 +156,13 @@ class BrandDetailAPIView(GenericAPIView):
 
     @swagger_auto_schema(tags=['Brands'])
     def get(self,request,slug):
-        brand = get_object_or_404(models.BrandModel, slug=slug, is_active=True)
+        try:
+            brand = models.BrandModel.objects.get(slug=slug, is_active=True)
+        except models.BrandModel.DoesNotExist:
+            raise NotFound("Brand does not exist.")
 
         serializer = self.serializer_class(brand)
         return Response(serializer.data, status=status.HTTP_200_OK)
-
 
 
 
@@ -161,9 +174,12 @@ class BrandDeleteUpdateAPIView(GenericAPIView):
 
     @swagger_auto_schema(tags=["Brands"])
     def patch(self,request,id):
-        brand = get_object_or_404(models.BrandModel, id=id, is_active=True)
+        try:
+            brand = models.BrandModel.objects.get(id=id)
+        except models.BrandModel.DoesNotExist:
+            raise NotFound("Brand does not exist.")
 
-        serializer = self.serializer_class(brand, data=request.data)
+        serializer = self.serializer_class(brand, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
@@ -173,12 +189,15 @@ class BrandDeleteUpdateAPIView(GenericAPIView):
 
     @swagger_auto_schema(tags=["Brands"])
     def delete(self,request,id):
-        brand = get_object_or_404(models.BrandModel, id=id, is_active=True)
+        try:
+            brand = models.BrandModel.objects.get(id=id, is_active=True)
+        except models.BrandModel.DoesNotExist:
+            raise NotFound("Brand does not exist.")
 
         brand.is_active = False
         brand.save()
 
-        return Response({"detail":"Brand deleted successfully"}, status=status.HTTP_200_OK)
+        return Response({"detail":"Brand deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
     
 
 
@@ -285,9 +304,47 @@ class ProductDetailAPIView(GenericAPIView):
 
     @swagger_auto_schema(tags=['Products'])
     def get(self,request,slug):
-        product = get_object_or_404(models.ProductModel, slug=slug, is_active=True)
-
+        try:
+            product = models.ProductModel.objects.get(slug=slug, is_active=True)
+        except models.ProductModel.DoesNotExist:
+            raise NotFound("Product does not exist.")
+        
         serializer = self.serializer_class(product)
         return Response(serializer.data, status=status.HTTP_200_OK)
+    
+
+
+class ProductDeleteUpdateAPIView(GenericAPIView):
+    permission_classes = [IsAuthenticated,DjangoModelPermissions]
+    serializer_class = serializers.ProductUpdateSerializer
+    queryset = models.ProductModel.objects.all()
+    lookup_field = "id"
+
+    @swagger_auto_schema(tags=["Products"])
+    def patch(self,request,id):
+        try:
+            product = models.ProductModel.objects.get(id=id)
+        except models.ProductModel.DoesNotExist:
+            raise NotFound("Product does not exist.")
+
+        serializer = self.serializer_class(product, data=request.data, partial=True)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @swagger_auto_schema(tags=["Products"])
+    def delete(self,request,id):
+        try:
+            product = models.ProductModel.objects.get(id=id,is_active=True)
+        except models.ProductModel.DoesNotExist:
+            raise NotFound("Product does not exist.")
+
+        product.is_active = False
+        product.save()
+
+        return Response({"detail":"Product deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
 
 

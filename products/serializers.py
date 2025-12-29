@@ -2,7 +2,7 @@ from rest_framework import serializers
 from products import models
 import re
 from django.db import IntegrityError,transaction
-
+from rest_framework.validators import UniqueTogetherValidator
 
 
 class CategoryCreateSerializer(serializers.ModelSerializer):
@@ -56,7 +56,8 @@ class CategoryDetailSerializer(serializers.ModelSerializer):
 class CategoryUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.CategoryModel
-        fields = ["name","parent"]
+        fields = ["name","parent","slug","is_active"]
+        read_only_fields = ["slug"]
 
     def validate_name(self,value):
         value = value.strip()
@@ -134,9 +135,11 @@ class BrandUpdateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.BrandModel
-        fields = ["name"]
+        fields = ["name","slug","is_active"]
+        read_only_fields = ["slug"]
 
     def validate_name(self,value):
+        value = value.strip()
         if not re.fullmatch(r'[A-Za-z]+( [A-Z(a-z]+)*',value):
             raise serializers.ValidationError("Brand name can only contain letters and spaces.")
         
@@ -172,10 +175,16 @@ class ProductCreateSerializer(serializers.ModelSerializer):
         model = models.ProductModel
         fields = ["name","category","brand","description","price","stock"]
 
+        validators = [
+            UniqueTogetherValidator(queryset = models.ProductModel.objects.all(),
+                                    fields = ["name","brand"],
+                                    message = "This brand already has a product with the same name.")
+        ]
+
     
     def validate_name(self,value):
         value = value.strip()
-        if not re.fullmatch(r'[A-Za-z]+( [A-Za-z]+)*',value):
+        if not re.fullmatch(r'[A-Za-z0-9]+( [A-Za-z0-9]+)*',value):
             raise serializers.ValidationError("Product name can only contain letters and spaces.")
 
         return value
@@ -193,12 +202,6 @@ class ProductCreateSerializer(serializers.ModelSerializer):
         return value
     
     def validate(self, attrs):
-        name  = attrs.get("name").strip()
-        brand = attrs.get("brand")
-
-        if models.ProductModel.objects.filter(name__iexact=name,brand=brand).exists():
-            raise serializers.ValidationError("This brand already has a product with the same name.")
-        
         return attrs
     
     def create(self, validated_data):
@@ -211,9 +214,6 @@ class ProductCreateSerializer(serializers.ModelSerializer):
         return product
 
     
-
-
-
 class ProductListSerializer(serializers.ModelSerializer):
     
     class Meta:
@@ -221,12 +221,57 @@ class ProductListSerializer(serializers.ModelSerializer):
         fields = ["id","name","category","brand","slug","description","price","stock"]
 
 
-
-
 class ProductDetailSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = models.ProductModel
         fields = ["id","name","brand","category","slug","description","price","stock"]
+
+
+
+class ProductUpdateSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = models.ProductModel
+        fields = ["name","category","brand","description","price","stock","slug","is_active"]
+        read_only_fields = ["slug"]
+
+        validators = [
+            UniqueTogetherValidator(queryset=models.ProductModel.objects.all(),
+                                    fields=["name","brand"],
+                                    message="This brand already has a product with the same name."
+                                    )
+                     ]
+
+    
+    def validate_name(self,value):
+        value = value.strip()
+        if not re.fullmatch(r'[A-Za-z0-9]+( [A-Za-z0-9]+)*',value):
+            raise serializers.ValidationError("Product name can only contain letters and spaces.")
+        
+        return value
+    
+    def validate_price(self,value):
+        if value < 0:
+            raise serializers.ValidationError("Price cannot be negative.")
+        
+        return value
+    
+    def validate_stock(self,value):
+        if value < 0:
+            raise serializers.ValidationError("Stock cannot be negative.")
+        
+        return value
+        
+    def validate(self, attrs):
+        return attrs
+    
+    def update(self, instance, validated_data):
+        try:
+            with transaction.atomic():
+                return super().update(instance, validated_data)
+        except IntegrityError:
+            raise serializers.ValidationError("This brand already has a product with the same name.")
+        
 
 
