@@ -23,20 +23,37 @@ class DefaultPagination(PageNumberPagination):
 
 # --------------Categories-------------
 
-class CategoryCreateAPIView(GenericAPIView):
+class AdminCategoryAPIView(GenericAPIView):
     permission_classes = [IsAuthenticated,DjangoModelPermissions]
-    serializer_class = serializers.CategoryCreateSerializer
     queryset = models.CategoryModel.objects.all()
+    pagination_class = DefaultPagination
+
+    def get_serializer_class(self):
+        if self.request.method == "POST":
+            return serializers.CategoryCreateSerializer
+        return serializers.AdminCategoryListSerializer
+
 
     @swagger_auto_schema(tags=["Categories"])
     def post(self,request):
-        serializer = self.serializer_class(data=request.data)
+        serializer = self.get_serializer(data=request.data)
         
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    @swagger_auto_schema(tags=["Categories"])    
+    def get(self,request):
+        categories = self.get_queryset()
+
+        paginator = self.pagination_class()
+        page = paginator.paginate_queryset(categories, request)
+
+        serializer = self.get_serializer(page, many=True)
+
+        return paginator.get_paginated_response(serializer.data)
 
 
 
@@ -76,7 +93,7 @@ class CategoryDetailAPIView(GenericAPIView):
     
 
 
-class CategoryUpdateDeleteAPIView(GenericAPIView):
+class AdminCategoryDetailAPIView(GenericAPIView):
     permission_classes = [IsAuthenticated, DjangoModelPermissions]
     serializer_class = serializers.CategoryUpdateSerializer
     queryset = models.CategoryModel.objects.all()
@@ -114,20 +131,36 @@ class CategoryUpdateDeleteAPIView(GenericAPIView):
 
 
 
-class BrandCreateAPIView(GenericAPIView):
+class AdminBrandAPIView(GenericAPIView):
     permission_classes = [IsAuthenticated,DjangoModelPermissions]
-    serializer_class = serializers.BrandCreateSerializer
     queryset = models.BrandModel.objects.all()
+    pagination_class = DefaultPagination
+    
+    def get_serializer_class(self):
+        if self.request.method == "POST":
+            return serializers.BrandCreateSerializer
+        return serializers.AdminBrandListSerializer
 
     @swagger_auto_schema(tags=['Brands'])
     def post(self,request):
-        serializer = self.serializer_class(data=request.data)
+        serializer = self.get_serializer(data=request.data)
         
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    @swagger_auto_schema(tags=["Brands"])
+    def get(self,request):
+        brands = self.get_queryset()
+
+        paginator = self.pagination_class()
+        page = paginator.paginate_queryset(brands,request)
+
+        serializer = self.get_serializer(page, many=True)
+
+        return paginator.get_paginated_response(serializer.data)
 
 
 
@@ -166,7 +199,7 @@ class BrandDetailAPIView(GenericAPIView):
 
 
 
-class BrandDeleteUpdateAPIView(GenericAPIView):
+class AdminBrandDetailAPIView(GenericAPIView):
     permission_classes = [IsAuthenticated, DjangoModelPermissions]
     serializer_class = serializers.BrandUpdateSerializer
     queryset = models.BrandModel.objects.all()
@@ -205,20 +238,36 @@ class BrandDeleteUpdateAPIView(GenericAPIView):
 # ------------ PRODUCTS ---------------
 
 
-class ProductCreateAPIView(GenericAPIView):
+class AdminProductAPIView(GenericAPIView):
     permission_classes = [IsAuthenticated,DjangoModelPermissions]
-    serializer_class = serializers.ProductCreateSerializer
     queryset = models.ProductModel.objects.all()
+    pagination_class = DefaultPagination
+
+    def get_serializer_class(self):
+        if self.request.method == "POST":
+            return serializers.ProductCreateSerializer
+        return serializers.AdminProductListSerializer
 
     @swagger_auto_schema(tags=["Products"])
     def post(self,request):
-        serializer = self.serializer_class(data=request.data)
+        serializer = self.get_serializer(data=request.data)
 
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    @swagger_auto_schema(tags=["Products"])
+    def get(self,request):
+        products = self.get_queryset()
+
+        paginator = self.pagination_class()
+        page = paginator.paginate_queryset(products,request)
+
+        serializer = self.get_serializer(page, many=True)
+
+        return paginator.get_paginated_response(serializer.data)
     
 
 
@@ -314,7 +363,7 @@ class ProductDetailAPIView(GenericAPIView):
     
 
 
-class ProductDeleteUpdateAPIView(GenericAPIView):
+class AdminProductDetailAPIView(GenericAPIView):
     permission_classes = [IsAuthenticated,DjangoModelPermissions]
     serializer_class = serializers.ProductUpdateSerializer
     queryset = models.ProductModel.objects.all()

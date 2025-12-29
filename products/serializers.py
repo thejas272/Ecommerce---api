@@ -37,6 +37,14 @@ class CategoryCreateSerializer(serializers.ModelSerializer):
 
 
 
+class AdminCategoryListSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model =  models.CategoryModel
+        fields = ["id","name","parent","slug","is_active","created_at","updated_at"]
+
+
+
 
 class CategoryListSerializer(serializers.ModelSerializer):
     
@@ -114,6 +122,14 @@ class BrandCreateSerializer(serializers.ModelSerializer):
                 return super().create(validated_data)
         except IntegrityError:
             raise serializers.ValidationError("Brand already exists.")
+
+
+class AdminBrandListSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = models.BrandModel
+        fields = ["id","name","slug","is_active","created_at","updated_at"]
+
 
 
 class BrandListSerializer(serializers.ModelSerializer):
@@ -213,7 +229,15 @@ class ProductCreateSerializer(serializers.ModelSerializer):
         
         return product
 
+
+class AdminProductListSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = models.ProductModel
+        fields = ["id","name","brand","category","slug","description","price","stock","is_active","created_at","updated_at"]
     
+
+
 class ProductListSerializer(serializers.ModelSerializer):
     
     class Meta:
