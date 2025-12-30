@@ -336,9 +336,17 @@ class ProductListAPIView(GenericAPIView):
         except InvalidOperation:
             return Response({"detail":"Invalid price format"},status=status.HTTP_400_BAD_REQUEST)
 
-        # filter cheks
+        # filter checks
         if category:
-            products = products.filter(category__slug=category)
+            category_instance = models.CategoryModel.objects.filter(slug=category,is_active=True).first()
+        
+            if category_instance is not None:
+                children = category_instance.get_descendants(include_self=True)
+
+                products = products.filter(category__in=children)
+            else:
+                products = products.none()
+        
 
         if brand:
             products = products.filter(brand__slug=brand)

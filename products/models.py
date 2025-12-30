@@ -1,18 +1,22 @@
 from django.db import models
 from django.utils.text import slugify
-
+from mptt.models import MPTTModel, TreeForeignKey
 
 # Create your models here.
 
-class CategoryModel(models.Model):
+class CategoryModel(MPTTModel):
     name   = models.CharField(max_length=100, unique=True, null=False, blank=False)
-    parent = models.ForeignKey('self', related_name='children', on_delete=models.CASCADE, null=True, blank=True)
+    parent = TreeForeignKey('self', related_name='children', on_delete=models.CASCADE, null=True, blank=True)
     slug   = models.SlugField(max_length=120, unique=True)
 
     is_active = models.BooleanField(default=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+
+    class MPTTMeta:
+        order_insertion_by = ["name"]
 
     def __str__(self):
         return f"{self.name} - {self.is_active}" 
