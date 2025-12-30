@@ -37,7 +37,7 @@ class CategoryCreateSerializer(serializers.ModelSerializer):
 
 
 
-class AdminCategoryListSerializer(serializers.ModelSerializer):
+class AdminCategorySerializer(serializers.ModelSerializer):
 
     class Meta:
         model =  models.CategoryModel
@@ -46,19 +46,13 @@ class AdminCategoryListSerializer(serializers.ModelSerializer):
 
 
 
-class CategoryListSerializer(serializers.ModelSerializer):
+
+class CategorySerializer(serializers.ModelSerializer):
     
     class Meta:
         model = models.CategoryModel
         fields = ['id','name','parent','slug']
 
-
-
-class CategoryDetailSerializer(serializers.ModelSerializer):
-    
-    class Meta:
-        model = models.CategoryModel
-        fields = ['id','name','parent','slug']
 
 
 class CategoryUpdateSerializer(serializers.ModelSerializer):
@@ -93,7 +87,7 @@ class CategoryUpdateSerializer(serializers.ModelSerializer):
 
 
 
-
+#----------------Brands-----------------
 
 
 class BrandCreateSerializer(serializers.ModelSerializer):
@@ -124,7 +118,7 @@ class BrandCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Brand already exists.")
 
 
-class AdminBrandListSerializer(serializers.ModelSerializer):
+class AdminBrandSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.BrandModel
@@ -132,18 +126,12 @@ class AdminBrandListSerializer(serializers.ModelSerializer):
 
 
 
-class BrandListSerializer(serializers.ModelSerializer):
+class BrandSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.BrandModel
         fields = ["id","name","slug"]
 
-
-class BrandDetailSerializer(serializers.ModelSerializer):
-
-    class Meta:
-        model = models.BrandModel
-        fields = ["id","name","slug"]
 
 
 
@@ -173,6 +161,9 @@ class BrandUpdateSerializer(serializers.ModelSerializer):
 
 
 
+
+
+#-------------------Products---------------------
 
 
 class ProductCreateSerializer(serializers.ModelSerializer):
@@ -230,7 +221,7 @@ class ProductCreateSerializer(serializers.ModelSerializer):
         return product
 
 
-class AdminProductListSerializer(serializers.ModelSerializer):
+class AdminProductSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.ProductModel
@@ -238,18 +229,11 @@ class AdminProductListSerializer(serializers.ModelSerializer):
     
 
 
-class ProductListSerializer(serializers.ModelSerializer):
+class ProductSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = models.ProductModel
         fields = ["id","name","category","brand","slug","description","price","stock"]
-
-
-class ProductDetailSerializer(serializers.ModelSerializer):
-    
-    class Meta:
-        model = models.ProductModel
-        fields = ["id","name","brand","category","slug","description","price","stock"]
 
 
 

@@ -31,10 +31,10 @@ class AdminCategoryAPIView(GenericAPIView):
     def get_serializer_class(self):
         if self.request.method == "POST":
             return serializers.CategoryCreateSerializer
-        return serializers.AdminCategoryListSerializer
+        return serializers.AdminCategorySerializer
 
 
-    @swagger_auto_schema(tags=["Categories"])
+    @swagger_auto_schema(tags=["Admin - Categories"])
     def post(self,request):
         serializer = self.get_serializer(data=request.data)
         
@@ -44,7 +44,7 @@ class AdminCategoryAPIView(GenericAPIView):
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
-    @swagger_auto_schema(tags=["Categories"])    
+    @swagger_auto_schema(tags=["Admin - Categories"])    
     def get(self,request):
         categories = self.get_queryset()
 
@@ -59,7 +59,7 @@ class AdminCategoryAPIView(GenericAPIView):
 
 class CategoryListAPIView(GenericAPIView):
     permission_classes = [AllowAny]
-    serializer_class = serializers.CategoryListSerializer
+    serializer_class = serializers.CategorySerializer
     pagination_class = DefaultPagination
 
     @swagger_auto_schema(tags=['Categories'])
@@ -78,7 +78,7 @@ class CategoryListAPIView(GenericAPIView):
 
 class CategoryDetailAPIView(GenericAPIView):
     permission_classes = [AllowAny]
-    serializer_class = serializers.CategoryDetailSerializer
+    serializer_class = serializers.CategorySerializer
     lookup_field = "slug"
 
     @swagger_auto_schema(tags=['Categories'])
@@ -95,18 +95,24 @@ class CategoryDetailAPIView(GenericAPIView):
 
 class AdminCategoryDetailAPIView(GenericAPIView):
     permission_classes = [IsAuthenticated, DjangoModelPermissions]
-    serializer_class = serializers.CategoryUpdateSerializer
     queryset = models.CategoryModel.objects.all()
     lookup_field = "id"
 
-    @swagger_auto_schema(tags=["Categories"])
+    def get_serializer_class(self):
+        if self.request.method == "PATCH":
+            return serializers.CategoryUpdateSerializer
+        return serializers.AdminCategorySerializer
+        
+
+    @swagger_auto_schema(tags=["Admin - Categories"])
     def patch(self,request,id):
         try:
             category = models.CategoryModel.objects.get(id=id)
         except models.CategoryModel.DoesNotExist:
             raise NotFound("Category does not exist.")
 
-        serializer = self.serializer_class(category, data=request.data, partial=True)
+        serializer = self.get_serializer(category, data=request.data, partial=True)
+
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
@@ -114,7 +120,7 @@ class AdminCategoryDetailAPIView(GenericAPIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
 
-    @swagger_auto_schema(tags=["Categories"])
+    @swagger_auto_schema(tags=["Admin - Categories"])
     def delete(self,request,id):
         try:
             category = models.CategoryModel.objects.get(id=id, is_active=True)
@@ -125,7 +131,18 @@ class AdminCategoryDetailAPIView(GenericAPIView):
         category.save()
 
         return Response({"detail":"Category deleted successfully."},status=status.HTTP_204_NO_CONTENT)
+    
 
+    @swagger_auto_schema(tags=["Admin - Categories"])
+    def get(self,request,id):
+        try:
+            category = models.CategoryModel.objects.get(id=id)
+        except models.CategoryModel.DoesNotExist:
+            raise NotFound("Category does not exist.")
+        
+        serializer = self.get_serializer(category)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 # ---------------BRANDS------------------
 
@@ -139,9 +156,9 @@ class AdminBrandAPIView(GenericAPIView):
     def get_serializer_class(self):
         if self.request.method == "POST":
             return serializers.BrandCreateSerializer
-        return serializers.AdminBrandListSerializer
+        return serializers.AdminBrandSerializer
 
-    @swagger_auto_schema(tags=['Brands'])
+    @swagger_auto_schema(tags=['Admin - Brands'])
     def post(self,request):
         serializer = self.get_serializer(data=request.data)
         
@@ -151,7 +168,7 @@ class AdminBrandAPIView(GenericAPIView):
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
-    @swagger_auto_schema(tags=["Brands"])
+    @swagger_auto_schema(tags=["Admin - Brands"])
     def get(self,request):
         brands = self.get_queryset()
 
@@ -166,7 +183,7 @@ class AdminBrandAPIView(GenericAPIView):
 
 class BrandListAPIView(GenericAPIView):
     permission_classes = [AllowAny]
-    serializer_class = serializers.BrandListSerializer
+    serializer_class = serializers.BrandSerializer
     pagination_class = DefaultPagination
 
     @swagger_auto_schema(tags=["Brands"])
@@ -184,7 +201,7 @@ class BrandListAPIView(GenericAPIView):
 
 class BrandDetailAPIView(GenericAPIView):
     permission_classes = [AllowAny]
-    serializer_class = serializers.BrandDetailSerializer
+    serializer_class = serializers.BrandSerializer
     lookup_field = "slug"
 
     @swagger_auto_schema(tags=['Brands'])
@@ -201,18 +218,23 @@ class BrandDetailAPIView(GenericAPIView):
 
 class AdminBrandDetailAPIView(GenericAPIView):
     permission_classes = [IsAuthenticated, DjangoModelPermissions]
-    serializer_class = serializers.BrandUpdateSerializer
     queryset = models.BrandModel.objects.all()
     lookup_field = "id"
 
-    @swagger_auto_schema(tags=["Brands"])
+    def get_serializer_class(self):
+        if self.request.method == "PATCH":
+            return serializers.BrandUpdateSerializer
+        return serializers.AdminBrandSerializer
+
+
+    @swagger_auto_schema(tags=["Admin - Brands"])
     def patch(self,request,id):
         try:
             brand = models.BrandModel.objects.get(id=id)
         except models.BrandModel.DoesNotExist:
             raise NotFound("Brand does not exist.")
 
-        serializer = self.serializer_class(brand, data=request.data, partial=True)
+        serializer = self.get_serializer(brand, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
@@ -220,7 +242,7 @@ class AdminBrandDetailAPIView(GenericAPIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-    @swagger_auto_schema(tags=["Brands"])
+    @swagger_auto_schema(tags=["Admin - Brands"])
     def delete(self,request,id):
         try:
             brand = models.BrandModel.objects.get(id=id, is_active=True)
@@ -232,6 +254,17 @@ class AdminBrandDetailAPIView(GenericAPIView):
 
         return Response({"detail":"Brand deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
     
+
+    @swagger_auto_schema(tags=["Admin - Brands"])
+    def get(self,request,id):
+        try:
+            brand = models.BrandModel.objects.get(id=id)
+        except models.BrandModel.DoesNotExist:
+            raise NotFound("Brand does not exist.")
+        
+        serializer = self.get_serializer(brand)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 
@@ -246,9 +279,9 @@ class AdminProductAPIView(GenericAPIView):
     def get_serializer_class(self):
         if self.request.method == "POST":
             return serializers.ProductCreateSerializer
-        return serializers.AdminProductListSerializer
+        return serializers.AdminProductSerializer
 
-    @swagger_auto_schema(tags=["Products"])
+    @swagger_auto_schema(tags=["Admin - Products"])
     def post(self,request):
         serializer = self.get_serializer(data=request.data)
 
@@ -258,7 +291,7 @@ class AdminProductAPIView(GenericAPIView):
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
-    @swagger_auto_schema(tags=["Products"])
+    @swagger_auto_schema(tags=["Admin - Products"])
     def get(self,request):
         products = self.get_queryset()
 
@@ -273,7 +306,7 @@ class AdminProductAPIView(GenericAPIView):
 
 class ProductListAPIView(GenericAPIView):
     permission_classes = [AllowAny]
-    serializer_class = serializers.ProductListSerializer
+    serializer_class = serializers.ProductSerializer
     pagination_class = DefaultPagination
 
 
@@ -348,7 +381,7 @@ class ProductListAPIView(GenericAPIView):
 
 class ProductDetailAPIView(GenericAPIView):
     permission_classes = [AllowAny]
-    serializer_class = serializers.ProductDetailSerializer
+    serializer_class = serializers.ProductSerializer
     lookup_field = "slug"
 
     @swagger_auto_schema(tags=['Products'])
@@ -365,18 +398,23 @@ class ProductDetailAPIView(GenericAPIView):
 
 class AdminProductDetailAPIView(GenericAPIView):
     permission_classes = [IsAuthenticated,DjangoModelPermissions]
-    serializer_class = serializers.ProductUpdateSerializer
     queryset = models.ProductModel.objects.all()
     lookup_field = "id"
 
-    @swagger_auto_schema(tags=["Products"])
+    def get_serializer_class(self):
+        if self.request.method == "PATCH":
+            return serializers.ProductUpdateSerializer
+        return serializers.AdminProductSerializer
+
+
+    @swagger_auto_schema(tags=["Admin - Products"])
     def patch(self,request,id):
         try:
             product = models.ProductModel.objects.get(id=id)
         except models.ProductModel.DoesNotExist:
             raise NotFound("Product does not exist.")
 
-        serializer = self.serializer_class(product, data=request.data, partial=True)
+        serializer = self.get_serializer(product, data=request.data, partial=True)
 
         if serializer.is_valid():
             serializer.save()
@@ -384,7 +422,7 @@ class AdminProductDetailAPIView(GenericAPIView):
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    @swagger_auto_schema(tags=["Products"])
+    @swagger_auto_schema(tags=["Admin - Products"])
     def delete(self,request,id):
         try:
             product = models.ProductModel.objects.get(id=id,is_active=True)
@@ -395,5 +433,16 @@ class AdminProductDetailAPIView(GenericAPIView):
         product.save()
 
         return Response({"detail":"Product deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
+    
 
+    @swagger_auto_schema(tags=["Admin - Products"])
+    def get(self,request,id):
+        try:
+            product = models.ProductModel.objects.get(id=id)
+        except models.ProductModel.DoesNotExist:
+            raise NotFound("Product does not exist.")
+        
+        serializer = self.get_serializer(product)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
