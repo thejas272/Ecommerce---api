@@ -44,9 +44,43 @@ class AdminCategoryAPIView(GenericAPIView):
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
+
     @swagger_auto_schema(tags=["Admin - Categories"])    
     def get(self,request):
         categories = self.get_queryset()
+
+        is_active     = request.query_params.get("is_active")
+        parent        = request.query_params.get("parent")
+        category_slug = request.query_params.get("category")
+        search        = request.query_params.get("search")
+
+        if is_active:
+            is_active = is_active.lower()
+
+            if is_active == "true":
+                categories = categories.filter(is_active=True)
+            elif is_active == "false":
+                categories = categories.filter(is_active=False)
+
+        
+        if parent:
+            parent = parent.lower()
+            if parent == "null":
+                categories = categories.filter(level=0)
+            else:
+                category   = categories.filter(slug=parent).first()
+                if category is None:
+                    categories = categories.none()
+                else:
+                    categories = category.get_children()  
+        
+        if category_slug:
+            category_slug = category_slug.lower()
+            categories = categories.filter(slug=category_slug)
+        
+        if search:
+            search = search.lower()
+            categories = categories.filter(Q(slug__icontains=search) | Q(name__icontains=search))
 
         paginator = self.pagination_class()
         page = paginator.paginate_queryset(categories, request)
@@ -172,6 +206,25 @@ class AdminBrandAPIView(GenericAPIView):
     def get(self,request):
         brands = self.get_queryset()
 
+        is_active  = request.query_params.get("is_active")
+        brand_slug = request.query_params.get("brand")
+        search     = request.query_params.get("search")
+
+        if is_active:
+            is_active = is_active.lower()
+            if is_active == "true":
+                brands = brands.filter(is_active=True)
+            elif is_active == "false":
+                brands = brands.filter(is_active=False)
+
+        if brand_slug:
+            brand_slug = brand_slug.lower()
+            brands = brands.filter(slug=brand_slug)
+        
+        if search:
+            search = search.lower()
+            brands = brands.filter(Q(slug__icontains=search) | Q(name__icontains=search))
+
         paginator = self.pagination_class()
         page = paginator.paginate_queryset(brands,request)
 
@@ -294,6 +347,59 @@ class AdminProductAPIView(GenericAPIView):
     @swagger_auto_schema(tags=["Admin - Products"])
     def get(self,request):
         products = self.get_queryset()
+
+        category_slug = request.query_params.get("category")
+        brand_slug    = request.query_params.get("brand")
+        search        = request.query_params.get("search")
+        min_price     = request.query_params.get("min_price")
+        max_price     = request.query_params.get("max_price")
+        is_active     = request.query_params.get("is_active") 
+
+        try:
+            if min_price:
+                min_price = Decimal(min_price)
+            if max_price:
+                max_price = Decimal(max_price)
+        except InvalidOperation:
+            return Response({"detail":"Invalid price format."},status=status.HTTP_400_BAD_REQUEST)
+
+
+        if category_slug:
+            category_slug = category_slug.lower()
+            category_instance = models.CategoryModel.objects.filter(slug=category_slug).first()
+
+            if category_instance is not None:
+                children = category_instance.get_descendants(include_self=True)
+                products = products.filter(category__in=children)
+            else:
+                products = products.none()
+        
+        if brand_slug:
+            brand_slug = brand_slug.lower()
+            products = products.filter(brand__slug=brand_slug)
+
+        if search:
+            search = search.lower()
+            products = products.filter(Q(slug__icontains=search) | 
+                                       Q(name__icontains=search) | 
+                                       Q(category__slug__icontains=search) | 
+                                       Q(brand__slug__icontains=search)
+                                       )
+        
+        if min_price:
+            products = products.filter(price__gte=min_price)
+        
+        if max_price:
+            products = products.filter(price__lte=max_price)
+        
+        if is_active:
+            is_active = is_active.lower()
+            if is_active == "false":
+                products = products.filter(is_active=False)
+            elif is_active == "true":
+                products = products.filter(is_active=True)
+            
+
 
         paginator = self.pagination_class()
         page = paginator.paginate_queryset(products,request)
