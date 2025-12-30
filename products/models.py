@@ -23,7 +23,7 @@ class CategoryModel(MPTTModel):
     
 
     def save(self,*args,**kwargs):
-        if not self.slug or self.pk:
+        if not self.slug:
             self.slug = slugify(self.name)
         
         return super().save(*args,**kwargs)
@@ -44,7 +44,7 @@ class BrandModel(models.Model):
         return f"{self.name} - {self.is_active}"
     
     def save(self,*args,**kwargs):
-        if not self.slug or self.pk:
+        if not self.slug:
             self.slug = slugify(self.name)
         
         return super().save(*args,**kwargs)
@@ -80,7 +80,7 @@ class ProductModel(models.Model):
     
 
     def save(self,*args,**kwargs):
-        if not self.slug or self.pk:
+        if not self.slug:
             self.slug = slugify(self.name)
         
         return super().save(*args,**kwargs)

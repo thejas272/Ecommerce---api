@@ -14,7 +14,8 @@ class CategoryCreateSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = models.CategoryModel
-        fields = ["name","parent"]
+        fields = ["id","name","parent","slug","is_active","created_at","updated_at"]
+        read_only_fields = ["id","slug","created_at","updated_at"]
 
     
     def validate_name(self,value):
@@ -58,8 +59,8 @@ class CategorySerializer(serializers.ModelSerializer):
 class CategoryUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.CategoryModel
-        fields = ["name","parent","slug","is_active"]
-        read_only_fields = ["slug"]
+        fields = ["id","name","parent","slug","is_active","created_at","updated_at"]
+        read_only_fields = ["id","slug","created_at","updated_at"]
 
     def validate_name(self,value):
         value = value.strip()
@@ -95,7 +96,8 @@ class BrandCreateSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = models.BrandModel
-        fields = ["name"]
+        fields = ["id","name","slug","is_active","created_at","updated_at"]
+        read_only_fields = ["id","slug","created_at","updated_at"]
 
 
     def validate_name(self,value):
@@ -139,8 +141,8 @@ class BrandUpdateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.BrandModel
-        fields = ["name","slug","is_active"]
-        read_only_fields = ["slug"]
+        fields = ["id","name","slug","is_active","created_at","updated_at"]
+        read_only_fields = ["id","slug","created_at","updated_at"]
 
     def validate_name(self,value):
         value = value.strip()
@@ -180,7 +182,8 @@ class ProductCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.ProductModel
-        fields = ["name","category","brand","description","price","stock"]
+        fields = ["id","name","category","brand","slug","description","price","stock","is_active","created_at","updated_at"]
+        read_only_fields = ["id","slug","created_at","updated_at"]
 
         validators = [
             UniqueTogetherValidator(queryset = models.ProductModel.objects.all(),
@@ -241,8 +244,8 @@ class ProductUpdateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.ProductModel
-        fields = ["name","category","brand","description","price","stock","slug","is_active"]
-        read_only_fields = ["slug"]
+        fields = ["id","name","category","brand","description","price","stock","slug","is_active","created_at","updated_at"]
+        read_only_fields = ["id","slug","created_at","updated_at"]
 
         validators = [
             UniqueTogetherValidator(queryset=models.ProductModel.objects.all(),
