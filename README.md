@@ -101,14 +101,14 @@ The project focuses on clean REST design, JWT-based authentication, role-based a
 ### 🔓 Public APIs
 
 ```text
-GET  /api/products/categories/
-GET  /api/products/categories/{slug}/
+GET  /api/catalog/categories/
+GET  /api/catalog/categories/{slug}/
 
-GET  /api/products/brands/
-GET  /api/products/brands/{slug}/
+GET  /api/catalog/brands/
+GET  /api/catalog/brands/{slug}/
 
-GET  /api/products/
-GET  /api/products/{slug}/
+GET  /api/catalog/
+GET  /api/catalog/{slug}/
 
 ```
 
