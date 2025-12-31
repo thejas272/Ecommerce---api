@@ -3,7 +3,7 @@ from products import models
 import re
 from django.db import IntegrityError,transaction
 from rest_framework.validators import UniqueTogetherValidator
-
+from accounts.helpers import create_audit_log
 
 class CategoryCreateSerializer(serializers.ModelSerializer):
     name   = serializers.CharField(required=True)
@@ -29,10 +29,22 @@ class CategoryCreateSerializer(serializers.ModelSerializer):
         
         return value
 
+
     def create(self, validated_data):
+        request = self.context.get("request")
+
+        if not request or not request.user:
+            raise serializers.ValidationError("User authentication required for this operation.")
+        
+        action  = "CREATE"
+        message = f"New category {validated_data['name']} created by {request.user.username}"
         try:
             with transaction.atomic():
-                return super().create(validated_data)
+                category = super().create(validated_data)
+                create_audit_log(request.user,action,category,message)
+
+                return category
+
         except IntegrityError:
             raise serializers.ValidationError("Category already exists.")
 
@@ -79,10 +91,35 @@ class CategoryUpdateSerializer(serializers.ModelSerializer):
         
         return value
     
+
     def update(self, instance, validated_data):
+        request = self.context.get("request")
+
+        if not request or not request.user:
+            raise serializers.ValidationError("User authentication required for this operation.")
+        
+        action  = "UPDATE"
+        changes = {}
+        for field,new_value in validated_data.items():
+
+            old_value = getattr(instance,field)
+
+            if old_value != new_value:
+                changes[field] = {"old":str(old_value),
+                                  "new":str(new_value)
+                                  }
+
+         
         try:
             with transaction.atomic():
-                return super().update(instance, validated_data)
+                category = super().update(instance, validated_data)
+
+                if changes:
+                    changes_message = ", ".join(f"{field} changed from {v['old']} -> {v['new']}" for field,v in changes.items())
+                    message = f"{changes_message} by {request.user.username}"
+                    create_audit_log(request.user,action,category,message,changes)
+
+                return category
         except IntegrityError:
             raise serializers.ValidationError("Category already exists.")
 
@@ -113,9 +150,21 @@ class BrandCreateSerializer(serializers.ModelSerializer):
     
 
     def create(self, validated_data):
+        request = self.context.get("request")
+
+        if not request or not request.user:
+            raise serializers.ValidationError("User authentication required for this operation.")
+        
+        action  = "CREATE"
+        message = f"Brand {validated_data["name"]} created by {request.user.username}"
+
+
         try:
             with transaction.atomic():
-                return super().create(validated_data)
+                brand = super().create(validated_data)
+                create_audit_log(request.user,action,brand,message)
+
+                return brand
         except IntegrityError:
             raise serializers.ValidationError("Brand already exists.")
 
@@ -155,9 +204,34 @@ class BrandUpdateSerializer(serializers.ModelSerializer):
         return value
     
     def update(self, instance, validated_data):
+        request = self.context.get("request")
+
+        if not request or not request.user:
+            raise serializers.ValidationError("User authentication required for this operation.")
+        
+        action = "UPDATE"
+        changes = {}
+
+        for field,new_value in validated_data.items():
+            old_value = getattr(instance,field)
+
+            if old_value != new_value:
+                changes[field] = {"old":str(old_value),
+                                  "new":str(new_value)
+                                  }
+
+
         try:
             with transaction.atomic():
-                return super().update(instance, validated_data)
+                brand = super().update(instance, validated_data)
+
+                if changes:
+                    changes_message = ", ".join(f"{field} changed from {v['old']} -> {v['new']}" for field,v in changes.items())
+                    message = f"{changes_message} by {request.user.username}"
+
+                    create_audit_log(request.user,action,brand,message,changes)
+
+                return brand
         except IntegrityError:
             raise serializers.ValidationError("Brand already exists.")
 
@@ -215,9 +289,20 @@ class ProductCreateSerializer(serializers.ModelSerializer):
         return attrs
     
     def create(self, validated_data):
+        request = self.context.get("request")
+
+        if not request or not request.user:
+            raise serializers.ValidationError("User authentication required for this operation.")
+        
+        action  = "CREATE"
+        message = f"Product {validated_data['name']} created by {request.user.username}"
+
         try:
             with transaction.atomic():
-                return super().create(validated_data)
+                product = super().create(validated_data)
+                create_audit_log(request.user,action,product,message)
+
+                return product
         except IntegrityError:
             raise serializers.ValidationError("This brand already has a product with the same name.")
         
@@ -278,9 +363,33 @@ class ProductUpdateSerializer(serializers.ModelSerializer):
         return attrs
     
     def update(self, instance, validated_data):
+        request = self.context.get("request")
+
+        if not request or not request.user:
+            raise serializers.ValidationError("User authentication required for this operation.")
+        
+        action = "UPDATE"
+        changes = {}
+
+        for field,new_value in validated_data.items():
+            old_value = getattr(instance,field)
+
+            if old_value != new_value:
+                changes[field] = {"old":str(old_value),
+                                  "new":str(new_value)
+                                  }
+
         try:
             with transaction.atomic():
-                return super().update(instance, validated_data)
+                product = super().update(instance, validated_data)
+
+                if changes:
+                    changes_message = ", ".join(f"{field} changed from {v['old']} -> {v['new']}" for field,v in changes.items())
+                    message = f"{changes_message} by {request.user.username}"
+                
+                create_audit_log(request.user,action,product,message,changes)
+
+                return product
         except IntegrityError:
             raise serializers.ValidationError("This brand already has a product with the same name.")
         

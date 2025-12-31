@@ -12,6 +12,8 @@ from decimal import Decimal, InvalidOperation
 from django.db.models import Q
 from rest_framework.permissions import DjangoModelPermissions
 from rest_framework.exceptions import NotFound
+from accounts.helpers import create_audit_log
+from django.db import IntegrityError,transaction
 # Create your views here.
 
 
@@ -36,7 +38,7 @@ class AdminCategoryAPIView(GenericAPIView):
 
     @swagger_auto_schema(tags=["Admin - Categories"])
     def post(self,request):
-        serializer = self.get_serializer(data=request.data)
+        serializer = self.get_serializer(data=request.data, context={"request":request})
         
         if serializer.is_valid():
             serializer.save()
@@ -145,7 +147,7 @@ class AdminCategoryDetailAPIView(GenericAPIView):
         except models.CategoryModel.DoesNotExist:
             raise NotFound("Category does not exist.")
 
-        serializer = self.get_serializer(category, data=request.data, partial=True)
+        serializer = self.get_serializer(category, data=request.data, partial=True, context={"request":request})
 
         if serializer.is_valid():
             serializer.save()
@@ -160,11 +162,17 @@ class AdminCategoryDetailAPIView(GenericAPIView):
             category = models.CategoryModel.objects.get(id=id, is_active=True)
         except models.CategoryModel.DoesNotExist:
             raise NotFound("Category does not exist.") 
+        
+        action  = "SOFT_DELETE"
+        message = f"Category {category.name} deactivated by {request.user.username}"
 
-        category.is_active = False
-        category.save()
+        with transaction.atomic():
+            category.is_active = False
+            category.save()
 
-        return Response({"detail":"Category deleted successfully."},status=status.HTTP_204_NO_CONTENT)
+            create_audit_log(request.user,action,category,message) 
+
+        return Response({"detail":"Category deleted successfully."},status=status.HTTP_200_OK)
     
 
     @swagger_auto_schema(tags=["Admin - Categories"])
@@ -194,7 +202,7 @@ class AdminBrandAPIView(GenericAPIView):
 
     @swagger_auto_schema(tags=['Admin - Brands'])
     def post(self,request):
-        serializer = self.get_serializer(data=request.data)
+        serializer = self.get_serializer(data=request.data, context={"request":request})
         
         if serializer.is_valid():
             serializer.save()
@@ -287,7 +295,7 @@ class AdminBrandDetailAPIView(GenericAPIView):
         except models.BrandModel.DoesNotExist:
             raise NotFound("Brand does not exist.")
 
-        serializer = self.get_serializer(brand, data=request.data, partial=True)
+        serializer = self.get_serializer(brand, data=request.data, partial=True, context={"request":request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
@@ -302,10 +310,16 @@ class AdminBrandDetailAPIView(GenericAPIView):
         except models.BrandModel.DoesNotExist:
             raise NotFound("Brand does not exist.")
 
-        brand.is_active = False
-        brand.save()
+        action  = "SOFT_DELETE"
+        message = f"Brand {brand.name} deactivated by {request.user.username}"
 
-        return Response({"detail":"Brand deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+        with transaction.atomic():
+            brand.is_active = False
+            brand.save()
+
+            create_audit_log(request.user,action,brand,message)
+
+        return Response({"detail":"Brand deleted successfully"}, status=status.HTTP_200_OK)
     
 
     @swagger_auto_schema(tags=["Admin - Brands"])
@@ -336,7 +350,7 @@ class AdminProductAPIView(GenericAPIView):
 
     @swagger_auto_schema(tags=["Admin - Products"])
     def post(self,request):
-        serializer = self.get_serializer(data=request.data)
+        serializer = self.get_serializer(data=request.data, context={"request":request})
 
         if serializer.is_valid():
             serializer.save()
@@ -528,7 +542,7 @@ class AdminProductDetailAPIView(GenericAPIView):
         except models.ProductModel.DoesNotExist:
             raise NotFound("Product does not exist.")
 
-        serializer = self.get_serializer(product, data=request.data, partial=True)
+        serializer = self.get_serializer(product, data=request.data, partial=True, context={"request":request})
 
         if serializer.is_valid():
             serializer.save()
@@ -542,11 +556,17 @@ class AdminProductDetailAPIView(GenericAPIView):
             product = models.ProductModel.objects.get(id=id,is_active=True)
         except models.ProductModel.DoesNotExist:
             raise NotFound("Product does not exist.")
+        
+        action = "SOFT_DELETE"
+        message = f"Product {product.name} deactivated by {request.user.username}"
 
-        product.is_active = False
-        product.save()
+        with transaction.atomic():
+            product.is_active = False
+            product.save()
 
-        return Response({"detail":"Product deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
+            create_audit_log(request.user,action,product,message)
+
+        return Response({"detail":"Product deleted successfully."}, status=status.HTTP_200_OK)
     
 
     @swagger_auto_schema(tags=["Admin - Products"])

@@ -19,7 +19,7 @@ class CategoryModel(MPTTModel):
         order_insertion_by = ["name"]
 
     def __str__(self):
-        return f"{self.name} - {self.is_active}" 
+        return f"{self.name}" 
     
 
     def save(self,*args,**kwargs):
@@ -41,7 +41,7 @@ class BrandModel(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{self.name} - {self.is_active}"
+        return f"{self.name}"
     
     def save(self,*args,**kwargs):
         if not self.slug:
@@ -69,7 +69,7 @@ class ProductModel(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{self.name} - {self.category.name} - {self.brand.name}"
+        return f"{self.name}"
     
 
     class Meta:
