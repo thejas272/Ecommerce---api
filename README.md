@@ -107,8 +107,8 @@ GET  /api/catalog/categories/{slug}/
 GET  /api/catalog/brands/
 GET  /api/catalog/brands/{slug}/
 
-GET  /api/catalog/
-GET  /api/catalog/{slug}/
+GET  /api/catalog/products/
+GET  /api/catalog/products/{slug}/
 
 ```
 
