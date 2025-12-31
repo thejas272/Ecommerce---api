@@ -14,6 +14,7 @@ from rest_framework.permissions import DjangoModelPermissions
 from rest_framework.exceptions import NotFound
 from accounts.helpers import create_audit_log
 from django.db import IntegrityError,transaction
+from common.swagger import CATEGORY_PARAM,BRAND_PARAM,SEARCH_PARAM,IS_ACTIVE_PARAM,PARENT_PARAM,MIN_PRICE_PARAM,MAX_PRICE_PARAM,SORT_PARAM,IN_STOCK_PARAM
 # Create your views here.
 
 
@@ -47,7 +48,9 @@ class AdminCategoryAPIView(GenericAPIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
 
-    @swagger_auto_schema(tags=["Admin - Categories"])    
+    @swagger_auto_schema(tags=["Admin - Categories"],
+                         manual_parameters=[IS_ACTIVE_PARAM,PARENT_PARAM,CATEGORY_PARAM,SEARCH_PARAM]
+                         )    
     def get(self,request):
         categories = self.get_queryset()
 
@@ -210,7 +213,8 @@ class AdminBrandAPIView(GenericAPIView):
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
-    @swagger_auto_schema(tags=["Admin - Brands"])
+    @swagger_auto_schema(tags=["Admin - Brands"],
+                         manual_parameters=[IS_ACTIVE_PARAM,BRAND_PARAM,SEARCH_PARAM])
     def get(self,request):
         brands = self.get_queryset()
 
@@ -358,7 +362,8 @@ class AdminProductAPIView(GenericAPIView):
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
-    @swagger_auto_schema(tags=["Admin - Products"])
+    @swagger_auto_schema(tags=["Admin - Products"],
+                         manual_parameters=[CATEGORY_PARAM,BRAND_PARAM,SEARCH_PARAM,MIN_PRICE_PARAM,MAX_PRICE_PARAM,IS_ACTIVE_PARAM])
     def get(self,request):
         products = self.get_queryset()
 
@@ -436,7 +441,8 @@ class ProductListAPIView(GenericAPIView):
                     "oldest":"created_at"
                     }
 
-    @swagger_auto_schema(tags=["Products"])
+    @swagger_auto_schema(tags=["Products"],
+                         manual_parameters=[CATEGORY_PARAM,BRAND_PARAM,MIN_PRICE_PARAM,MAX_PRICE_PARAM,SEARCH_PARAM,SORT_PARAM,IN_STOCK_PARAM])
     def get(self,request):
         products = models.ProductModel.objects.filter(is_active=True)
 
