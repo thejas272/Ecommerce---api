@@ -41,7 +41,7 @@ class CategoryCreateSerializer(serializers.ModelSerializer):
         try:
             with transaction.atomic():
                 category = super().create(validated_data)
-                create_audit_log(request.user,action,category,message)
+                create_audit_log(user=request.user,action=action,instance=category,message=message)
 
                 return category
 
@@ -117,7 +117,7 @@ class CategoryUpdateSerializer(serializers.ModelSerializer):
                 if changes:
                     changes_message = ", ".join(f"{field} changed from {v['old']} -> {v['new']}" for field,v in changes.items())
                     message = f"{changes_message} by {request.user.username}"
-                    create_audit_log(request.user,action,category,message,changes)
+                    create_audit_log(user=request.user,action=action,instance=category,message=message,changes=changes)
 
                 return category
         except IntegrityError:
@@ -162,7 +162,7 @@ class BrandCreateSerializer(serializers.ModelSerializer):
         try:
             with transaction.atomic():
                 brand = super().create(validated_data)
-                create_audit_log(request.user,action,brand,message)
+                create_audit_log(user=request.user,action=action,instance=brand,message=message)
 
                 return brand
         except IntegrityError:
@@ -229,7 +229,7 @@ class BrandUpdateSerializer(serializers.ModelSerializer):
                     changes_message = ", ".join(f"{field} changed from {v['old']} -> {v['new']}" for field,v in changes.items())
                     message = f"{changes_message} by {request.user.username}"
 
-                    create_audit_log(request.user,action,brand,message,changes)
+                    create_audit_log(user=request.user,action=action,instance=brand,message=message,changes=changes)
 
                 return brand
         except IntegrityError:
@@ -300,7 +300,7 @@ class ProductCreateSerializer(serializers.ModelSerializer):
         try:
             with transaction.atomic():
                 product = super().create(validated_data)
-                create_audit_log(request.user,action,product,message)
+                create_audit_log(user=request.user,action=action,instance=product,message=message)
 
                 return product
         except IntegrityError:
@@ -387,7 +387,7 @@ class ProductUpdateSerializer(serializers.ModelSerializer):
                     changes_message = ", ".join(f"{field} changed from {v['old']} -> {v['new']}" for field,v in changes.items())
                     message = f"{changes_message} by {request.user.username}"
                 
-                create_audit_log(request.user,action,product,message,changes)
+                create_audit_log(user=request.user,action=action,instance=product,message=message,changes=changes)
 
                 return product
         except IntegrityError:

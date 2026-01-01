@@ -7,7 +7,6 @@ from drf_yasg.utils import swagger_auto_schema
 from products import models
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
-from rest_framework.pagination import PageNumberPagination
 from decimal import Decimal, InvalidOperation
 from django.db.models import Q
 from rest_framework.permissions import DjangoModelPermissions
@@ -15,13 +14,9 @@ from rest_framework.exceptions import NotFound
 from accounts.helpers import create_audit_log
 from django.db import IntegrityError,transaction
 from common.swagger import CATEGORY_PARAM,BRAND_PARAM,SEARCH_PARAM,IS_ACTIVE_PARAM,PARENT_PARAM,MIN_PRICE_PARAM,MAX_PRICE_PARAM,SORT_PARAM,IN_STOCK_PARAM
+from common.pagination import DefaultPagination
 # Create your views here.
 
-
-class DefaultPagination(PageNumberPagination):
-    page_size = 10
-    max_page_size = 50
-    page_size_query_param = "page_size"
 
 
 # --------------Categories-------------
@@ -173,7 +168,7 @@ class AdminCategoryDetailAPIView(GenericAPIView):
             category.is_active = False
             category.save()
 
-            create_audit_log(request.user,action,category,message) 
+            create_audit_log(user=request.user,action=action,instance=category,message=message) 
 
         return Response({"detail":"Category deleted successfully."},status=status.HTTP_200_OK)
     
@@ -321,7 +316,7 @@ class AdminBrandDetailAPIView(GenericAPIView):
             brand.is_active = False
             brand.save()
 
-            create_audit_log(request.user,action,brand,message)
+            create_audit_log(user=request.user,action=action,instance=brand,message=message)
 
         return Response({"detail":"Brand deleted successfully"}, status=status.HTTP_200_OK)
     
@@ -485,6 +480,7 @@ class ProductListAPIView(GenericAPIView):
 
         
         if search:
+            search = search.strip()
             products = products.filter(Q(name__icontains=search)|
                                        Q(category__name__icontains=search)|
                                        Q(brand__name__icontains=search)|
@@ -570,7 +566,7 @@ class AdminProductDetailAPIView(GenericAPIView):
             product.is_active = False
             product.save()
 
-            create_audit_log(request.user,action,product,message)
+            create_audit_log(user=request.user,action=action,instance=product,message=message)
 
         return Response({"detail":"Product deleted successfully."}, status=status.HTTP_200_OK)
     
