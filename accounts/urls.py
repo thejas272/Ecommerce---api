@@ -10,5 +10,8 @@ urlpatterns = [
 
     path('me/',views.ProfileApiView.as_view(),             name="me"),
     path('me/password/',views.UpdatePasswordAPIView.as_view(), name="change-password"),
+
+    path('admin/users/',views.UserListAPIView.as_view(), name="user-list"),
+    path('admin/audit-logs/',views.AuditLogListAPIView.as_view(), name="audit_log_list"),
     
 ]

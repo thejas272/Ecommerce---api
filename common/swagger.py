@@ -21,7 +21,14 @@ BRAND_PARAM = openapi.Parameter(
 SEARCH_PARAM = openapi.Parameter(
     name="search",
     in_=openapi.IN_QUERY,
-    description="Search by name, description, brand, or category",
+    description=(
+        "Search across relevant text fields for this endpoint.\n\n"
+        "Examples (depending on API):\n"
+        "- name, description\n"
+        "- username, email\n"
+        "- brand, category\n"
+        "- log message"
+    ),
     type=openapi.TYPE_STRING,
 )
 
@@ -29,9 +36,9 @@ IS_ACTIVE_PARAM = openapi.Parameter(
     name="is_active",
     in_=openapi.IN_QUERY,
     description=(
-        "Filter products/brands/categories by Active.\n\n"
-        "- `true` → Active products/brands/categories\n"
-        "- `false` → InActive products/brands/categories "
+        "Filter results by active status.\n\n"
+        "- `true` → active records\n"
+        "- `false` → inactive records"
     ),
     type=openapi.TYPE_STRING,
     enum=["true", "false"],
@@ -99,3 +106,105 @@ IN_STOCK_PARAM = openapi.Parameter(
 )
 
 
+
+# Audit Log params
+
+
+U_ID_PARAM = openapi.Parameter(
+    name="u_id",
+    in_=openapi.IN_QUERY,
+    description="Filter logs by user ID (actor who performed the action)",
+    type=openapi.TYPE_NUMBER,
+    required=False
+)
+
+ACTION_PARAM = openapi.Parameter(
+    name="action",
+    in_=openapi.IN_QUERY,
+    description=(
+        "Filter logs by action type.\n\n"
+        "Allowed values:\n"
+        "- `LOGIN` → Login events\n"
+        "- `LOGOUT` → Logout events\n"
+        "- `CREATE` → Record creation\n"
+        "- `UPDATE` → Record updates\n"
+        "- `SOFT_DELETE` → Record deactivation"
+        ),
+    type=openapi.TYPE_STRING,
+    enum=["LOGIN", "LOGOUT", "CREATE", "UPDATE", "SOFT_DELETE"],
+    required=False
+)
+
+MODEL_PARAM = openapi.Parameter(
+    name="model",
+    in_=openapi.IN_QUERY,
+    description=(
+        "Filter logs by entity type.\n\n"
+        "Allowed values:\n"
+        "- `brand`\n"
+        "- `category`\n"
+        "- `product`"
+    ),
+    type=openapi.TYPE_STRING,
+    enum=["brand", "category", "product"],
+    required=False
+)
+
+OBJECT_ID_PARAM = openapi.Parameter(
+    name="object_id",
+    in_=openapi.IN_QUERY,
+    description="Filter logs by related object ID",
+    type=openapi.TYPE_STRING,
+    required=False
+)
+
+# User Param
+
+ID_PARAM = openapi.Parameter(
+    name="id",
+    in_=openapi.IN_QUERY,
+    description="Filter records by primary ID (context-dependent)",
+    type=openapi.TYPE_NUMBER,
+    required=False
+)
+
+
+
+
+IS_STAFF_PARAM = openapi.Parameter(
+    name="is_staff",
+    in_=openapi.IN_QUERY,
+    description=(
+        "Filter users by staff status.\n\n"
+        "- `true` → users with staff status\n"
+        "- `false` → users without staff status"
+    ),
+    type=openapi.TYPE_STRING,
+    required=False
+)
+
+
+DATE_FROM_PARAM = openapi.Parameter(
+    name="date_from",
+    in_=openapi.IN_QUERY,
+    description=(
+        "Filter records created on or after this date.\n\n"
+        "**Format:** `YYYY-MM-DD`\n\n"
+        "Example: `2025-01-01`"
+    ),
+    type=openapi.TYPE_STRING,
+    required=False
+)
+
+
+DATE_TO_PARAM = openapi.Parameter(
+    name="date_to",
+    in_=openapi.IN_QUERY,
+    description=(
+        "Filter records created on or before this date.\n\n"
+        "**Format:** `YYYY-MM-DD`\n\n"
+        "Example: `2025-01-31`"
+    ),
+    type=openapi.TYPE_STRING,
+    required=False
+)

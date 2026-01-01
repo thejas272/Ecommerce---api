@@ -5,7 +5,7 @@ from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken,TokenError
 import re
 from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, BlacklistedToken
-
+from django.conf import settings
 
 class RegsiterSerializer(serializers.ModelSerializer):
     first_name = serializers.CharField(required=True, max_length=30)
@@ -238,4 +238,16 @@ class UpdatePasswordSerializer(serializers.ModelSerializer):
                 BlacklistedToken.objects.get_or_create(token=token)
         
 
+class UserSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = models.User
+        fields = ["id","username","email","first_name","last_name","is_staff","is_superuser","last_login","is_active","date_joined"]
+
+
+class AuditLogSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = models.AuditLog
+        fields = ["id","action","message","changes","user_id","model","object_id","created_at"]
 
