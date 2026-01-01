@@ -6,7 +6,7 @@ from rest_framework.permissions import AllowAny,IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from drf_yasg.utils import swagger_auto_schema
 from accounts.throttles import LoginRateThrottle, RefreshTokenRateThrottle
-
+from accounts.helpers import create_audit_log
 
 # Create your views here.
 
@@ -41,8 +41,16 @@ class LoginAPIView(GenericAPIView):
         if serializer.is_valid():
             user = serializer.validated_data.get('user')
             if user:
-                refresh = RefreshToken.for_user(user)
-                access = refresh.access_token
+                try:
+                    refresh = RefreshToken.for_user(user)
+                    access = refresh.access_token
+                except Exception:
+                    return Response({"detail":"Login failed. Please try again."},status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                
+                action = "LOGIN"
+                message = f"{user.username} logged in."
+                create_audit_log(user=user,action=action,instance=user,message=message)
+
                 return Response({"Refresh":str(refresh),
                                  "Access":str(access)
                                 },status=status.HTTP_200_OK
@@ -52,7 +60,7 @@ class LoginAPIView(GenericAPIView):
 
 
 class LogoutAPIView(GenericAPIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
     serializer_class = serializers.LogoutSerializer
 
     @swagger_auto_schema(tags=['Authentication'])
@@ -61,6 +69,11 @@ class LogoutAPIView(GenericAPIView):
 
         if serializer.is_valid():
             serializer.save()
+            
+            action = "LOGOUT"
+            message = f"{request.user.username} logged out."
+            create_audit_log(user=request.user,action=action,instance=request.user,message=message)
+
             return Response(status=status.HTTP_204_NO_CONTENT)
         
         return Response(status=status.HTTP_400_BAD_REQUEST)
