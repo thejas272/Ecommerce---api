@@ -1,6 +1,7 @@
 from rest_framework.response import Response
 from rest_framework import status
 from accounts import serializers
+from rest_framework import serializers as drf_serializers
 from rest_framework.generics import GenericAPIView
 from rest_framework.permissions import AllowAny,IsAuthenticated,DjangoModelPermissions
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -155,9 +156,9 @@ class UserListAPIView(GenericAPIView):
 
     @swagger_auto_schema(tags=['Admin'],
                          manual_parameters=[ID_PARAM,SEARCH_PARAM,IS_STAFF_PARAM,IS_ACTIVE_PARAM,DATE_FROM_PARAM,DATE_TO_PARAM]
-                         )
+                        )
     def get(self,request):
-        users = self.queryset
+        users = self.queryset.order_by('-date_joined')
 
         id          = request.query_params.get("id")
         search      = request.query_params.get("search")
@@ -187,7 +188,10 @@ class UserListAPIView(GenericAPIView):
                 users = users.filter(is_staff=True)
             elif is_staff == "false":
                 users = users.filter(is_staff=False)
+            else:
+                users = users.none()
         
+
         if is_active:
             is_active = is_active.lower()
 
@@ -195,20 +199,25 @@ class UserListAPIView(GenericAPIView):
                 users = users.filter(is_active=True)
             elif is_active == "false":
                 users = users.filter(is_active=False)
+            else:
+                users = users.none()
 
-        date_field = serializers.DateField()
+
+        date_field = drf_serializers.DateField()
+
         if date_from:
             try:
                 date_from = date_field.run_validation(date_from)
-            except serializers.ValidationError:
+            except drf_serializers.ValidationError:
                 return Response({"detail":"Invalid date format. Use YYYY-MM-DD."},status=status.HTTP_400_BAD_REQUEST)
-            
+
             users = users.filter(date_joined__date__gte=date_from)
         
+
         if date_to:
             try:
                 date_to = date_field.run_validation(date_to)
-            except serializers.ValidationError:
+            except drf_serializers.ValidationError:
                 return Response({"detail":"Invalid date format. Use YYYY-MM-DD."},status=status.HTTP_400_BAD_REQUEST)
 
             users = users.filter(date_joined__date__lte=date_to)
@@ -283,12 +292,12 @@ class AuditLogListAPIView(GenericAPIView):
                 logs = logs.none()
         
 
-        date_field = serializers.DateField()
+        date_field = drf_serializers.DateField()
 
         if date_from:
             try:
                 date_from = date_field.run_validation(date_from)
-            except serializers.ValidationError:
+            except drf_serializers.ValidationError:
                 return Response({"detail":"Invalid date format. Use YYYY-MM-DD."}, status=status.HTTP_400_BAD_REQUEST)
             
             logs = logs.filter(created_at__date__gte=date_from) 
@@ -296,7 +305,7 @@ class AuditLogListAPIView(GenericAPIView):
         if date_to:
             try:
                 date_to = date_field.run_validation(date_to)
-            except serializers.ValidationError:
+            except drf_serializers.ValidationError:
                 return Response({"detail":"Invalid date format. Use YYYY-MM-DD."},status=status.HTTP_400_BAD_REQUEST)
             
             logs = logs.filter(created_at__date__lte=date_to)
