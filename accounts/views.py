@@ -161,7 +161,7 @@ class UserListAPIView(GenericAPIView):
                          manual_parameters=[ID_PARAM,SEARCH_PARAM,IS_STAFF_PARAM,IS_ACTIVE_PARAM,DATE_FROM_PARAM,DATE_TO_PARAM]
                         )
     def get(self,request):
-        users = self.queryset.order_by('-date_joined')
+        users = self.get_queryset().order_by('-date_joined')
 
         try:
             users = admin_filter_users(request,users)
@@ -191,7 +191,7 @@ class AuditLogListAPIView(GenericAPIView):
                          manual_parameters=[ID_PARAM,U_ID_PARAM,ACTION_PARAM,DATE_FROM_PARAM,DATE_TO_PARAM,SEARCH_PARAM,MODEL_PARAM,OBJECT_ID_PARAM]
                         )
     def get(self,request):
-        logs = self.queryset
+        logs = self.get_queryset()
 
         try:
             logs = admin_filter_logs(request,logs)
