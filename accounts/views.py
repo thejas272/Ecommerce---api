@@ -1,7 +1,6 @@
 from rest_framework.response import Response
 from rest_framework import status
 from accounts import serializers
-from rest_framework import serializers as drf_serializers
 from rest_framework.generics import GenericAPIView
 from rest_framework.permissions import AllowAny,IsAuthenticated,DjangoModelPermissions
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -12,6 +11,10 @@ from accounts import models
 from common.pagination import DefaultPagination
 from django.db.models import Q
 from common.swagger import ID_PARAM,IS_ACTIVE_PARAM,IS_STAFF_PARAM,DATE_FROM_PARAM,DATE_TO_PARAM,SEARCH_PARAM,U_ID_PARAM,MODEL_PARAM,ACTION_PARAM,OBJECT_ID_PARAM
+from accounts.filters.admin_users import admin_filter_users
+from accounts.filters.admin_logs import admin_filter_logs
+from rest_framework import serializers as drf_serializers
+
 # Create your views here.
 
 
@@ -160,70 +163,10 @@ class UserListAPIView(GenericAPIView):
     def get(self,request):
         users = self.queryset.order_by('-date_joined')
 
-        id          = request.query_params.get("id")
-        search      = request.query_params.get("search")
-        is_staff    = request.query_params.get("is_staff")
-        is_active   = request.query_params.get("is_active")
-        date_from   = request.query_params.get("date_from")
-        date_to     = request.query_params.get("date_to")
-
-        if id:
-            try:
-                id= int(id)
-            except ValueError:
-                return Response({"detail":"Invalid user id."},status=status.HTTP_400_BAD_REQUEST)
-            users = users.filter(id=id)
-
-
-        if search:
-            users = users.filter(Q(username__icontains=search) |
-                                 Q(email__icontains=search) |
-                                 Q(first_name__icontains=search) |
-                                 Q(last_name__icontains=search)
-                                )
-        if is_staff:
-            is_staff = is_staff.lower()
-
-            if is_staff == "true":
-                users = users.filter(is_staff=True)
-            elif is_staff == "false":
-                users = users.filter(is_staff=False)
-            else:
-                users = users.none()
-        
-
-        if is_active:
-            is_active = is_active.lower()
-
-            if is_active == "true":
-                users = users.filter(is_active=True)
-            elif is_active == "false":
-                users = users.filter(is_active=False)
-            else:
-                users = users.none()
-
-
-        date_field = drf_serializers.DateField()
-
-        if date_from:
-            try:
-                date_from = date_field.run_validation(date_from)
-            except drf_serializers.ValidationError:
-                return Response({"detail":"Invalid date format. Use YYYY-MM-DD."},status=status.HTTP_400_BAD_REQUEST)
-
-            users = users.filter(date_joined__date__gte=date_from)
-        
-
-        if date_to:
-            try:
-                date_to = date_field.run_validation(date_to)
-            except drf_serializers.ValidationError:
-                return Response({"detail":"Invalid date format. Use YYYY-MM-DD."},status=status.HTTP_400_BAD_REQUEST)
-
-            users = users.filter(date_joined__date__lte=date_to)
-
-
-
+        try:
+            users = admin_filter_users(request,users)
+        except drf_serializers.ValidationError as e:
+            return Response({"detail":e.detail}, status=status.HTTP_400_BAD_REQUEST)
 
 
         paginator = self.pagination_class()
@@ -244,94 +187,16 @@ class AuditLogListAPIView(GenericAPIView):
     queryset = models.AuditLog.objects.all()
     pagination_class = DefaultPagination
 
-    MODEL_OPTIONS = {"brand"    : "BrandModel",
-                     "category" : "CategoryModel",
-                     "product"  : "ProductModel",
-                    }
-    
-    ACTIONS = {"LOGIN","LOGOUT","CREATE","UPDATE","SOFT_DELETE"}
-
     @swagger_auto_schema(tags=['Admin'],
                          manual_parameters=[ID_PARAM,U_ID_PARAM,ACTION_PARAM,DATE_FROM_PARAM,DATE_TO_PARAM,SEARCH_PARAM,MODEL_PARAM,OBJECT_ID_PARAM]
                         )
     def get(self,request):
         logs = self.queryset
 
-        id        = request.query_params.get("id")
-        user_id   = request.query_params.get("u_id")
-        action    = request.query_params.get("action")
-        date_from = request.query_params.get("date_from")
-        date_to   = request.query_params.get("date_to")
-        search    = request.query_params.get("search")
-        model     = request.query_params.get("model")
-        object_id = request.query_params.get("object_id")
-
-        if id:
-            try:
-                id = int(id)
-            except ValueError:
-                return Response({"detail":"Invalid log id."},status=status.HTTP_400_BAD_REQUEST)
-            
-            logs = logs.filter(id=id)
-        
-        if user_id:
-            try:
-                user_id = int(user_id)
-            except ValueError:
-                return Response({"detail":"Invalid user id."},status=status.HTTP_400_BAD_REQUEST)
-            
-            logs = logs.filter(user_id=user_id)
-        
-
-        if action:
-            action = action.upper()
-
-            if action in self.ACTIONS:
-                logs = logs.filter(action=action)
-            else:
-                logs = logs.none()
-        
-
-        date_field = drf_serializers.DateField()
-
-        if date_from:
-            try:
-                date_from = date_field.run_validation(date_from)
-            except drf_serializers.ValidationError:
-                return Response({"detail":"Invalid date format. Use YYYY-MM-DD."}, status=status.HTTP_400_BAD_REQUEST)
-            
-            logs = logs.filter(created_at__date__gte=date_from) 
-
-        if date_to:
-            try:
-                date_to = date_field.run_validation(date_to)
-            except drf_serializers.ValidationError:
-                return Response({"detail":"Invalid date format. Use YYYY-MM-DD."},status=status.HTTP_400_BAD_REQUEST)
-            
-            logs = logs.filter(created_at__date__lte=date_to)
-
-
-        if search:
-            search = search.strip()
-            logs = logs.filter(Q(action__icontains=search)|
-                               Q(message__icontains=search)|
-                               Q(changes__icontains=search)
-                               )
-        
-
-        if model:
-            model = model.lower()
-
-            model_filter = self.MODEL_OPTIONS.get(model)
-            if model_filter is not None:
-                logs = logs.filter(model=model_filter)
-            else:
-                logs = logs.none()
-
-        
-        if object_id:
-            logs = logs.filter(object_id=object_id)
-
+        try:
+            logs = admin_filter_logs(request,logs)
+        except drf_serializers.ValidationError as e:
+            return Response({"detail":e.detail},status=status.HTTP_400_BAD_REQUEST)
 
         paginator = self.pagination_class()
         page =paginator.paginate_queryset(logs,request)
