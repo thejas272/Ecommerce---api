@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     'mptt',
     'accounts',
     'products',
+    'carts',
 ]
 
 
