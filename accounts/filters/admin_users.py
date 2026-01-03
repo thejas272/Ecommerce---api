@@ -6,20 +6,13 @@ from django.db.models import Q
 
 def admin_filter_users(request,queryset):
 
-    user_id     = request.query_params.get("id")
     search      = request.query_params.get("search")
     is_staff    = request.query_params.get("is_staff")
     is_active   = request.query_params.get("is_active")
     date_from   = request.query_params.get("date_from")
     date_to     = request.query_params.get("date_to")
 
-    if user_id:
-        try:
-            user_id = int(user_id)
-        except ValueError:
-            raise drf_serializers.ValidationError({"id":"Invalid user id."})
-       
-        queryset = queryset.filter(id=user_id)
+
 
 
 

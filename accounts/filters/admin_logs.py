@@ -13,7 +13,6 @@ ACTIONS = {"LOGIN","LOGOUT","CREATE","UPDATE","SOFT_DELETE"}
 
 def admin_filter_logs(request,queryset):
 
-    log_id    = request.query_params.get("id")
     user_id   = request.query_params.get("u_id")
     action    = request.query_params.get("action")
     search    = request.query_params.get("search")
@@ -23,14 +22,6 @@ def admin_filter_logs(request,queryset):
     object_id = request.query_params.get("object_id")
 
 
-
-    if log_id:
-        try:
-            log_id = int(log_id)
-        except ValueError:
-            raise drf_serializers.ValidationError({"id":"Invalid log id."})
-
-        queryset = queryset.filter(id=log_id)
 
 
         

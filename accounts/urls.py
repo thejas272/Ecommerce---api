@@ -16,5 +16,6 @@ urlpatterns = [
     path('admin/audit-logs/',views.AuditLogListAPIView.as_view(), name="audit_log_list"),
     
     path('admin/users/<int:id>/',views.UserDetailAPIView.as_view(), name="admin-user-detail"),
+    path('admin/audit-logs/<int:id>/', views.AdminAuditLogDetailAPIView.as_view(), name="admin-audit-log-detail"),
     
 ]

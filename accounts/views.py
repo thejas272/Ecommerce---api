@@ -153,7 +153,7 @@ class UpdatePasswordAPIView(GenericAPIView):
 
 class UserListAPIView(GenericAPIView):
     permission_classes = [IsAuthenticated,DjangoModelPermissions,IsAdminUser]
-    serializer_class = serializers.UserSerializer
+    serializer_class = serializers.AdminUserSerializer
     queryset = models.User.objects.all()
     pagination_class = DefaultPagination
 
@@ -182,7 +182,7 @@ class UserListAPIView(GenericAPIView):
 
 class UserDetailAPIView(GenericAPIView):
     permission_classes = [IsAuthenticated,DjangoModelPermissions,IsAdminUser]
-    serializer_class = serializers.AdminUserDetailSerializer
+    serializer_class = serializers.AdminUserSerializer
     queryset = models.User.objects.all()
     lookup_field = "id"
 
@@ -203,7 +203,7 @@ class UserDetailAPIView(GenericAPIView):
 
 class AuditLogListAPIView(GenericAPIView):
     permission_classes = [IsAuthenticated,DjangoModelPermissions,IsAdminUser]
-    serializer_class = serializers.AuditLogSerializer
+    serializer_class = serializers.AdminAuditLogSerializer
     queryset = models.AuditLog.objects.all()
     pagination_class = DefaultPagination
 
@@ -224,4 +224,26 @@ class AuditLogListAPIView(GenericAPIView):
         serializer = self.serializer_class(page, many=True)
 
         return paginator.get_paginated_response(serializer.data)
+    
+
+class AdminAuditLogDetailAPIView(GenericAPIView):
+    permission_classes = [IsAuthenticated,DjangoModelPermissions,IsAdminUser]
+    serializer_class = serializers.AdminAuditLogSerializer
+    queryset = models.AuditLog.objects.all()
+    lookup_field = "id"
+
+    @swagger_auto_schema(tags=["Admin"])
+    def get(self,request,id):
+        try:
+            audit_log = self.get_queryset().get(id=id)
+        except models.AuditLog.DoesNotExist:
+            return Response({"detail":"Invalid audit log id."},status=status.HTTP_404_NOT_FOUND)
+        
+        serializer = self.serializer_class(audit_log)
+
+        return Response(serializer.data,status=status.HTTP_200_OK)
+        
+
+        
+
     
