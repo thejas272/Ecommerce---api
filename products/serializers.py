@@ -387,7 +387,7 @@ class ProductUpdateSerializer(serializers.ModelSerializer):
                     changes_message = ", ".join(f"{field} changed from {v['old']} -> {v['new']}" for field,v in changes.items())
                     message = f"{changes_message} by {request.user.username}"
                 
-                create_audit_log(user=request.user,action=action,instance=product,message=message,changes=changes)
+                    create_audit_log(user=request.user,action=action,instance=product,message=message,changes=changes)
 
                 return product
         except IntegrityError:
