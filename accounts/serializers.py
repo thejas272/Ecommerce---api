@@ -149,7 +149,7 @@ class ProfileSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = models.User
-        fields = ["id","username","email","first_name","last_name","is_staff","is_staff","date_joined"]
+        fields = ["id","username","email","first_name","last_name","is_active","last_login","date_joined"]
 
 
 
@@ -251,3 +251,12 @@ class AuditLogSerializer(serializers.ModelSerializer):
         model = models.AuditLog
         fields = ["id","action","message","changes","user_id","model","object_id","created_at"]
 
+
+
+
+
+class AdminUserDetailSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = models.User
+        fields = ["id","username","email","first_name","last_name","last_login","is_active","is_staff","is_superuser","date_joined"]

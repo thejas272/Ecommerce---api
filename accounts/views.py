@@ -14,7 +14,7 @@ from common.swagger import ID_PARAM,IS_ACTIVE_PARAM,IS_STAFF_PARAM,DATE_FROM_PAR
 from accounts.filters.admin_users import admin_filter_users
 from accounts.filters.admin_logs import admin_filter_logs
 from rest_framework import serializers as drf_serializers
-
+from rest_framework.permissions import IsAdminUser
 # Create your views here.
 
 
@@ -152,7 +152,7 @@ class UpdatePasswordAPIView(GenericAPIView):
 
 
 class UserListAPIView(GenericAPIView):
-    permission_classes = [IsAuthenticated,DjangoModelPermissions]
+    permission_classes = [IsAuthenticated,DjangoModelPermissions,IsAdminUser]
     serializer_class = serializers.UserSerializer
     queryset = models.User.objects.all()
     pagination_class = DefaultPagination
@@ -180,9 +180,29 @@ class UserListAPIView(GenericAPIView):
 
 
 
+class UserDetailAPIView(GenericAPIView):
+    permission_classes = [IsAuthenticated,DjangoModelPermissions,IsAdminUser]
+    serializer_class = serializers.AdminUserDetailSerializer
+    queryset = models.User.objects.all()
+    lookup_field = "id"
+
+    @swagger_auto_schema(tags=["Admin"])
+    def get(self,request,id):
+        try:
+            user = self.get_queryset().get(id=id)
+        except models.User.DoesNotExist:
+            return Response({"detail":"Invalid User id."},status=status.HTTP_404_NOT_FOUND)
+        
+        serializer = self.serializer_class(user)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+
+
 
 class AuditLogListAPIView(GenericAPIView):
-    permission_classes = [IsAuthenticated,DjangoModelPermissions]
+    permission_classes = [IsAuthenticated,DjangoModelPermissions,IsAdminUser]
     serializer_class = serializers.AuditLogSerializer
     queryset = models.AuditLog.objects.all()
     pagination_class = DefaultPagination

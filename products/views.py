@@ -19,6 +19,7 @@ from products.filters.admin_brands import admin_brand_list
 from products.filters.admin_products import admin_products_list
 from products.filters.user_products import user_products_list
 from rest_framework import serializers as drf_serializers
+from rest_framework.permissions import IsAdminUser
 
 # Create your views here.
 
@@ -27,7 +28,7 @@ from rest_framework import serializers as drf_serializers
 # --------------Categories-------------
 
 class AdminCategoryAPIView(GenericAPIView):
-    permission_classes = [IsAuthenticated,DjangoModelPermissions]
+    permission_classes = [IsAuthenticated,DjangoModelPermissions,IsAdminUser]
     queryset = models.CategoryModel.objects.all()
     pagination_class = DefaultPagination
 
@@ -102,7 +103,7 @@ class CategoryDetailAPIView(GenericAPIView):
 
 
 class AdminCategoryDetailAPIView(GenericAPIView):
-    permission_classes = [IsAuthenticated, DjangoModelPermissions]
+    permission_classes = [IsAuthenticated, DjangoModelPermissions,IsAdminUser]
     queryset = models.CategoryModel.objects.all()
     lookup_field = "id"
 
@@ -163,7 +164,7 @@ class AdminCategoryDetailAPIView(GenericAPIView):
 
 
 class AdminBrandAPIView(GenericAPIView):
-    permission_classes = [IsAuthenticated,DjangoModelPermissions]
+    permission_classes = [IsAuthenticated,DjangoModelPermissions,IsAdminUser]
     queryset = models.BrandModel.objects.all()
     pagination_class = DefaultPagination
     
@@ -235,7 +236,7 @@ class BrandDetailAPIView(GenericAPIView):
 
 
 class AdminBrandDetailAPIView(GenericAPIView):
-    permission_classes = [IsAuthenticated, DjangoModelPermissions]
+    permission_classes = [IsAuthenticated, DjangoModelPermissions,IsAdminUser]
     queryset = models.BrandModel.objects.all()
     lookup_field = "id"
 
@@ -296,7 +297,7 @@ class AdminBrandDetailAPIView(GenericAPIView):
 
 
 class AdminProductAPIView(GenericAPIView):
-    permission_classes = [IsAuthenticated,DjangoModelPermissions]
+    permission_classes = [IsAuthenticated,DjangoModelPermissions,IsAdminUser]
     queryset = models.ProductModel.objects.all()
     pagination_class = DefaultPagination
 
@@ -379,7 +380,7 @@ class ProductDetailAPIView(GenericAPIView):
 
 
 class AdminProductDetailAPIView(GenericAPIView):
-    permission_classes = [IsAuthenticated,DjangoModelPermissions]
+    permission_classes = [IsAuthenticated,DjangoModelPermissions,IsAdminUser]
     queryset = models.ProductModel.objects.all()
     lookup_field = "id"
 
