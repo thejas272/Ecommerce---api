@@ -5,4 +5,5 @@ from carts import views
 
 urlpatterns = [
     path('', views.AddToCartAPIView.as_view(), name="add-to-cart"),
+    path('<int:id>/',views.UpdateCartQuantityAPIVIew.as_view(), name="update-cart-quantity"),
 ]

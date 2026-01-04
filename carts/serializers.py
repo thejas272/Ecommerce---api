@@ -60,5 +60,33 @@ class AddToCartSerializer(serializers.ModelSerializer):
             cart_instance.save()
         
         return cart_instance
+    
+
+
+class UpdateCartQuantitySerializer(serializers.ModelSerializer):
+    quantity = serializers.IntegerField(min_value=1, required=True)
+    
+    class Meta:
+        model = carts_models.CartModel
+        fields = ["id","user","product","unit_price","quantity","total_price"]
+        read_only_fields = ["id","user","product","unit_price","total_price"]
+
+    def validate_quantity(self,value):
+        if value <= 0:
+            raise serializers.ValidationError("Quantity cannot be zero or negative.")
+        return value
+    
+    def validate(self,attrs):
+        quantity = attrs.get('quantity')
+
+        if quantity > self.instance.product.stock:
+            raise serializers.ValidationError("insufficient stock.")
+        
+        return attrs
+    
+    def update(self, instance, validated_data):
+
+        return super().update(instance, validated_data)
+    
         
 
