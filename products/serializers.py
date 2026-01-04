@@ -50,17 +50,40 @@ class CategoryCreateSerializer(serializers.ModelSerializer):
 
 
 
-class AdminCategorySerializer(serializers.ModelSerializer):
+
+
+
+class CategoryNestedSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.CategoryModel
+        fields = ["id","name","slug"]
+
+class AdminCategoryNestedSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = models.CategoryModel
+        fields = ["id","name","slug","is_active","created_at","updated_at"]
+
+
+class AdminCategoryListSerializer(serializers.ModelSerializer):
+    parent = CategoryNestedSerializer(read_only=True)
 
     class Meta:
         model =  models.CategoryModel
         fields = ["id","name","parent","slug","is_active","created_at","updated_at"]
 
 
+class AdminCategoryDetailSerializer(serializers.ModelSerializer):
+    parent = AdminCategoryNestedSerializer(read_only=True)
+    
+    class Meta:
+        model = models.CategoryModel
+        fields = ["id","name","parent","slug","is_active","created_at","updated_at"]
 
 
 
 class CategorySerializer(serializers.ModelSerializer):
+    parent = CategoryNestedSerializer(read_only=True)
     
     class Meta:
         model = models.CategoryModel
@@ -309,7 +332,9 @@ class ProductCreateSerializer(serializers.ModelSerializer):
         return product
 
 
-class AdminProductSerializer(serializers.ModelSerializer):
+class AdminProductListSerializer(serializers.ModelSerializer):
+    brand = BrandSerializer(read_only=True)
+    category = CategoryNestedSerializer(read_only=True)
 
     class Meta:
         model = models.ProductModel
@@ -317,7 +342,21 @@ class AdminProductSerializer(serializers.ModelSerializer):
     
 
 
+class AdminProductDetailSerializer(serializers.ModelSerializer):
+    brand = AdminBrandSerializer(read_only=True)
+    category = AdminCategoryNestedSerializer(read_only=True)
+
+    class Meta:
+        model = models.ProductModel
+        fields = ["id","name","brand","category","slug","description","price","stock","is_active","created_at","updated_at"]
+
+
+
+
 class ProductSerializer(serializers.ModelSerializer):
+    brand = BrandSerializer(read_only=True)
+    category = CategoryNestedSerializer(read_only=True)
+
     
     class Meta:
         model = models.ProductModel

@@ -238,17 +238,42 @@ class UpdatePasswordSerializer(serializers.ModelSerializer):
                 BlacklistedToken.objects.get_or_create(token=token)
         
 
-class AdminUserSerializer(serializers.ModelSerializer):
+class AdminUserListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.User
         fields = ["id","username","email","first_name","last_name","is_staff","is_superuser","last_login","is_active","date_joined"]
 
 
-class AdminAuditLogSerializer(serializers.ModelSerializer):
+
+class AdminUserDetailSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = models.User
+        fields = ["id","username","email","first_name","last_name","is_staff","is_superuser","last_login","is_active","date_joined"]
+
+
+
+
+
+
+class AdminUserNestedSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.User
+        fields = ["id","username","email"]
+
+class AdminAuditLogListSerializer(serializers.ModelSerializer):
+    user = AdminUserNestedSerializer()
+    class Meta:
+        model = models.AuditLog
+        fields = ["id","action","message","changes","user","model","object_id","created_at"]
+
+
+
+class AdminAuditLogDetailSerializer(serializers.ModelSerializer):
+    user = AdminUserDetailSerializer()
 
     class Meta:
         model = models.AuditLog
-        fields = ["id","action","message","changes","user_id","model","object_id","created_at"]
-
+        fields = ["id","action","message","changes","user","model","object_id","created_at"]
 

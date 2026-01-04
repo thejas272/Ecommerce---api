@@ -153,7 +153,7 @@ class UpdatePasswordAPIView(GenericAPIView):
 
 class UserListAPIView(GenericAPIView):
     permission_classes = [IsAuthenticated,DjangoModelPermissions,IsAdminUser]
-    serializer_class = serializers.AdminUserSerializer
+    serializer_class = serializers.AdminUserListSerializer
     queryset = models.User.objects.all()
     pagination_class = DefaultPagination
 
@@ -182,7 +182,7 @@ class UserListAPIView(GenericAPIView):
 
 class UserDetailAPIView(GenericAPIView):
     permission_classes = [IsAuthenticated,DjangoModelPermissions,IsAdminUser]
-    serializer_class = serializers.AdminUserSerializer
+    serializer_class = serializers.AdminUserDetailSerializer
     queryset = models.User.objects.all()
     lookup_field = "id"
 
@@ -203,8 +203,8 @@ class UserDetailAPIView(GenericAPIView):
 
 class AuditLogListAPIView(GenericAPIView):
     permission_classes = [IsAuthenticated,DjangoModelPermissions,IsAdminUser]
-    serializer_class = serializers.AdminAuditLogSerializer
-    queryset = models.AuditLog.objects.all()
+    serializer_class = serializers.AdminAuditLogListSerializer
+    queryset = models.AuditLog.objects.all().select_related('user')
     pagination_class = DefaultPagination
 
     @swagger_auto_schema(tags=['Admin'],
@@ -228,8 +228,8 @@ class AuditLogListAPIView(GenericAPIView):
 
 class AdminAuditLogDetailAPIView(GenericAPIView):
     permission_classes = [IsAuthenticated,DjangoModelPermissions,IsAdminUser]
-    serializer_class = serializers.AdminAuditLogSerializer
-    queryset = models.AuditLog.objects.all()
+    serializer_class = serializers.AdminAuditLogDetailSerializer
+    queryset = models.AuditLog.objects.all().select_related('user')
     lookup_field = "id"
 
     @swagger_auto_schema(tags=["Admin"])

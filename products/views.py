@@ -29,13 +29,13 @@ from rest_framework.permissions import IsAdminUser
 
 class AdminCategoryAPIView(GenericAPIView):
     permission_classes = [IsAuthenticated,DjangoModelPermissions,IsAdminUser]
-    queryset = models.CategoryModel.objects.all()
+    queryset = models.CategoryModel.objects.all().select_related('parent')
     pagination_class = DefaultPagination
 
     def get_serializer_class(self):
         if self.request.method == "POST":
             return serializers.CategoryCreateSerializer
-        return serializers.AdminCategorySerializer
+        return serializers.AdminCategoryListSerializer
 
 
     @swagger_auto_schema(tags=["Admin - Categories"])
@@ -73,7 +73,7 @@ class CategoryListAPIView(GenericAPIView):
 
     @swagger_auto_schema(tags=['Categories'])
     def get(self,request):
-        categories = models.CategoryModel.objects.filter(is_active=True)
+        categories = models.CategoryModel.objects.filter(is_active=True).select_related("parent").order_by('-created_at')
 
         paginator = self.pagination_class()
         page = paginator.paginate_queryset(categories, request)
@@ -110,7 +110,7 @@ class AdminCategoryDetailAPIView(GenericAPIView):
     def get_serializer_class(self):
         if self.request.method == "PATCH":
             return serializers.CategoryUpdateSerializer
-        return serializers.AdminCategorySerializer
+        return serializers.AdminCategoryDetailSerializer
         
 
     @swagger_auto_schema(tags=["Admin - Categories"])
@@ -298,13 +298,13 @@ class AdminBrandDetailAPIView(GenericAPIView):
 
 class AdminProductAPIView(GenericAPIView):
     permission_classes = [IsAuthenticated,DjangoModelPermissions,IsAdminUser]
-    queryset = models.ProductModel.objects.all()
+    queryset = models.ProductModel.objects.all().select_related('category','brand')
     pagination_class = DefaultPagination
 
     def get_serializer_class(self):
         if self.request.method == "POST":
             return serializers.ProductCreateSerializer
-        return serializers.AdminProductSerializer
+        return serializers.AdminProductListSerializer
 
     @swagger_auto_schema(tags=["Admin - Products"])
     def post(self,request):
@@ -345,7 +345,7 @@ class ProductListAPIView(GenericAPIView):
                          manual_parameters=[CATEGORY_PARAM,BRAND_PARAM,MIN_PRICE_PARAM,MAX_PRICE_PARAM,SEARCH_PARAM,SORT_PARAM,IN_STOCK_PARAM]
                          )
     def get(self,request):
-        products = models.ProductModel.objects.filter(is_active=True).order_by('-created_at')
+        products = models.ProductModel.objects.filter(is_active=True).select_related('category','brand').order_by('-created_at')
 
         try:
             products = user_products_list(request,products)
@@ -387,7 +387,7 @@ class AdminProductDetailAPIView(GenericAPIView):
     def get_serializer_class(self):
         if self.request.method == "PATCH":
             return serializers.ProductUpdateSerializer
-        return serializers.AdminProductSerializer
+        return serializers.AdminProductDetailSerializer
 
 
     @swagger_auto_schema(tags=["Admin - Products"])
