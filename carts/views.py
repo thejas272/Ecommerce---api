@@ -26,7 +26,7 @@ class AddToCartAPIView(GenericAPIView):
     
 
 
-class UpdateCartQuantityAPIVIew(GenericAPIView):
+class CartItemAPIView(GenericAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = serializers.UpdateCartQuantitySerializer
     lookup_field = "id"
@@ -44,3 +44,17 @@ class UpdateCartQuantityAPIVIew(GenericAPIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    
+    @swagger_auto_schema(tags=["Cart"])
+    def delete(self,request,id):
+        try:
+            cart_item = cart_models.CartModel.objects.get(id=id,user=request.user)
+        except cart_models.CartModel.DoesNotExist:
+            return Response({"detail":"Invalid cart id."},status=status.HTTP_404_NOT_FOUND)
+        
+        cart_item.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+    
+
+
