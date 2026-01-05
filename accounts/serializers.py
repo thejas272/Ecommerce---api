@@ -263,7 +263,7 @@ class AdminUserNestedSerializer(serializers.ModelSerializer):
         fields = ["id","username","email"]
 
 class AdminAuditLogListSerializer(serializers.ModelSerializer):
-    user = AdminUserNestedSerializer()
+    user = AdminUserNestedSerializer(read_only=True, allow_null=True)
     class Meta:
         model = models.AuditLog
         fields = ["id","action","message","changes","user","model","object_id","created_at"]
@@ -271,7 +271,7 @@ class AdminAuditLogListSerializer(serializers.ModelSerializer):
 
 
 class AdminAuditLogDetailSerializer(serializers.ModelSerializer):
-    user = AdminUserDetailSerializer()
+    user = AdminUserDetailSerializer(read_only=True, allow_null=True)
 
     class Meta:
         model = models.AuditLog

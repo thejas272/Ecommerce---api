@@ -4,7 +4,7 @@ from products import models as products_models
 from rest_framework.validators import UniqueTogetherValidator
 from django.db.utils import IntegrityError
 from django.db import transaction
-
+from products import serializers as products_serializers
 
 
 
@@ -60,6 +60,19 @@ class AddToCartSerializer(serializers.ModelSerializer):
             cart_instance.save()
         
         return cart_instance
+
+
+
+
+class CartListSerializer(serializers.ModelSerializer):
+    product = products_serializers.ProductNestedSerializer(read_only=True)
+    
+    brand_name    = serializers.CharField(source="product.brand.name", read_only=True)
+    category_name = serializers.CharField(source="product.category.name", read_only=True)
+    
+    class Meta:
+        model = carts_models.CartModel
+        fields = ["id","product","brand_name","category_name","unit_price","quantity","total_price","created_at","updated_at"]
     
 
 
@@ -68,8 +81,8 @@ class UpdateCartQuantitySerializer(serializers.ModelSerializer):
     
     class Meta:
         model = carts_models.CartModel
-        fields = ["id","user","product","unit_price","quantity","total_price"]
-        read_only_fields = ["id","user","product","unit_price","total_price"]
+        fields = ["id","product","unit_price","quantity","total_price"]
+        read_only_fields = ["id","product","unit_price","total_price"]
 
     def validate_quantity(self,value):
         if value <= 0:

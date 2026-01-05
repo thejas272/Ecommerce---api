@@ -6,17 +6,23 @@ from carts import models as cart_models
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework.response import Response
 from rest_framework import status
+from common.pagination import DefaultPagination
 # Create your views here.
 
 
-class AddToCartAPIView(GenericAPIView):
+class CartListCreateAPIView(GenericAPIView):
     permission_classes = [IsAuthenticated]
-    serializer_class = serializers.AddToCartSerializer
+    pagination_class = DefaultPagination
+
+    def get_serializer_class(self):
+        if self.request.method == "POST":
+            return serializers.AddToCartSerializer
+        return serializers.CartListSerializer
 
     @swagger_auto_schema(tags=["Cart"])
     def post(self,request):
         
-        serializer = self.serializer_class(data=request.data, context={"request":request})
+        serializer = self.get_serializer(data=request.data, context={"request":request})
 
         if serializer.is_valid():
             serializer.save()
@@ -24,6 +30,21 @@ class AddToCartAPIView(GenericAPIView):
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
+
+    @swagger_auto_schema(tags=["Cart"])
+    def get(self,request):
+        cart_items = cart_models.CartModel.objects.filter(user=request.user).select_related("product","product__brand","product__category")
+
+        paginator = self.pagination_class() 
+        page = paginator.paginate_queryset(cart_items,request)
+
+
+        serializer = self.get_serializer(page, many=True)
+
+        return paginator.get_paginated_response(serializer.data)
+        
+    
+
 
 
 class CartItemAPIView(GenericAPIView):

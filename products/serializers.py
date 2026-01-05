@@ -66,7 +66,7 @@ class AdminCategoryNestedSerializer(serializers.ModelSerializer):
 
 
 class AdminCategoryListSerializer(serializers.ModelSerializer):
-    parent = CategoryNestedSerializer(read_only=True)
+    parent = CategoryNestedSerializer(read_only=True, allow_null=True)
 
     class Meta:
         model =  models.CategoryModel
@@ -74,7 +74,7 @@ class AdminCategoryListSerializer(serializers.ModelSerializer):
 
 
 class AdminCategoryDetailSerializer(serializers.ModelSerializer):
-    parent = AdminCategoryNestedSerializer(read_only=True)
+    parent = AdminCategoryNestedSerializer(read_only=True, allow_null=True)
     
     class Meta:
         model = models.CategoryModel
@@ -83,7 +83,7 @@ class AdminCategoryDetailSerializer(serializers.ModelSerializer):
 
 
 class CategorySerializer(serializers.ModelSerializer):
-    parent = CategoryNestedSerializer(read_only=True)
+    parent = CategoryNestedSerializer(read_only=True, allow_null=True)
     
     class Meta:
         model = models.CategoryModel
@@ -434,3 +434,10 @@ class ProductUpdateSerializer(serializers.ModelSerializer):
         
 
 
+class ProductNestedSerializer(serializers.ModelSerializer):
+    brand = BrandSerializer(read_only=True)
+    category = CategoryNestedSerializer(read_only=True)
+
+    class Meta:
+        model = models.ProductModel
+        fields = ["id","name","brand","category"]
