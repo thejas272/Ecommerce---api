@@ -8,8 +8,13 @@ urlpatterns = [
     path('logout/',views.LogoutAPIView.as_view(),          name="logout"),
     path('refresh/',views.RefreshTokenAPIView.as_view(),   name="refresh"),
 
+
     path('me/',views.ProfileApiView.as_view(),             name="me"),
     path('me/password/',views.UpdatePasswordAPIView.as_view(), name="change-password"),
+
+
+    path('address/', views.AddressApiView.as_view(), name="address-create-list"),
+    path('address/<int:id>/',views.AddressDetailAPIView.as_view(), name="address-delete-update"),
 
 
     path('admin/users/',views.UserListAPIView.as_view(), name="user-list"),

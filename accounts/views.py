@@ -146,7 +146,89 @@ class UpdatePasswordAPIView(GenericAPIView):
             return Response({"detail":"Password changed successfully."},status=status.HTTP_200_OK)
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AddressApiView(GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    pagination_class = DefaultPagination
+
+    def get_serializer_class(self):
+        if self.request.method == "POST":
+            return serializers.AddressCreateSerializer
+        return serializers.AddressSerializer
+
+    @swagger_auto_schema(tags=["User"])
+    def post(self,request):
+        serializer = self.get_serializer(data=request.data, context={"request":request})
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
+    @swagger_auto_schema(tags=["User"])
+    def get(self,request):
+        user_addresses = models.AddressModel.objects.filter(user=request.user).order_by('-created_at')
+
+        paginator = self.pagination_class()
+
+        page = paginator.paginate_queryset(user_addresses,request)
+
+        serializer = self.get_serializer(page, many=True)
+
+        return paginator.get_paginated_response(serializer.data)
+    
+
+
+class AddressDetailAPIView(GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    lookup_field = "id"
+
+    def get_serializer_class(self):
+        if self.request.method == "PATCH":
+            return serializers.AddressUpdateSerializer
+        return serializers.AddressSerializer
+
+    @swagger_auto_schema(tags=["User"])
+    def delete(self,request,id):
+        try:
+            address = models.AddressModel.objects.get(id=id,user=request.user)
+        except models.AddressModel.DoesNotExist:
+            return Response({"detail":"Invalid address id."}, status=status.HTTP_404_NOT_FOUND)
+        
+        address.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+    
+
+    @swagger_auto_schema(tags=["User"])
+    def patch(self,request,id):
+        try:
+            address = models.AddressModel.objects.get(id=id,user=request.user)
+        except models.AddressModel.DoesNotExist:
+            return Response({"detail":"Invalid address id."},status=status.HTTP_404_NOT_FOUND)
+        
+
+        serializer = self.get_serializer(address, data=request.data, partial=True)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+
+    @swagger_auto_schema(tags=["User"])
+    def get(self,request,id):
+        try:
+            address = models.AddressModel.objects.get(id=id,user=request.user)
+        except models.AddressModel.DoesNotExist:
+            return Response({"detail":"Invalid address id."},status=status.HTTP_404_NOT_FOUND)
+        
+        serializer = self.get_serializer(address)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
 
     
 

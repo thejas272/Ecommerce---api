@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'drf_yasg',
     'mptt',
+    'phonenumber_field',
     'accounts',
     'products',
     'carts',

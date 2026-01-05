@@ -238,6 +238,110 @@ class UpdatePasswordSerializer(serializers.ModelSerializer):
                 BlacklistedToken.objects.get_or_create(token=token)
         
 
+
+class AddressCreateSerializer(serializers.ModelSerializer):
+    is_default = serializers.BooleanField(required=False)
+
+    class Meta:
+        model = models.AddressModel
+        fields = ["id","name","phone","address_line","city","state","pincode","is_default"]
+        read_only_fields = ["id"]
+
+    def validate_name(self,value):
+        if not re.fullmatch(r'[A-Za-z]+( [A-Za-z]+)*',value):
+            raise serializers.ValidationError("Name can only contain letters and spaces.")
+        
+        return value
+    
+    def validate_pincode(self,value):
+        if not re.fullmatch(r'[0-9]{6}',value):
+            raise serializers.ValidationError("Invalid pincode.")
+        
+        return value
+    
+    def create(self, validated_data):
+        request = self.context.get("request")
+
+        if not request or not request.user:
+            raise serializers.ValidationError("Authentication required for this operation.")
+        
+        validated_data['user'] = request.user
+
+        try:
+            current_address = models.AddressModel.objects.filter(user=request.user)
+
+            with transaction.atomic():
+                if not current_address.exists():
+                    validated_data['is_default'] = True
+                else:
+                    is_default = validated_data.get('is_default')
+                    if is_default and is_default == True:
+                        current_address.filter(is_default=True).update(is_default=False)
+
+                return super().create(validated_data)
+        except IntegrityError:
+            raise serializers.ValidationError("Only one default address is allowed.")
+
+
+
+class AddressSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = models.AddressModel
+        fields = ["id","name","phone","address_line","city","state","pincode","is_default"]
+
+
+
+
+class AddressUpdateSerializer(serializers.ModelSerializer):
+    is_default = serializers.BooleanField(required=False) 
+
+    class Meta:
+        model = models.AddressModel
+        fields = ["id","name","phone","address_line","city","state","pincode","is_default"]
+        read_only_fields = ["id"]
+
+
+    def validate_name(self,value):
+        if not re.fullmatch(r'[A-Za-z]+( [A-Za-z]+)*',value):
+            raise serializers.ValidationError("Name can only contain letters and spaces.")
+        
+        return value
+    
+    def validate_pincode(self,value):
+        if not re.fullmatch(r'[0-9]{6}',value):
+            raise serializers.ValidationError("Invalid pincode.")
+        
+        return value
+    
+
+    def update(self, instance, validated_data):
+        request = self.context.get('request')
+
+        if not request or not request.user:
+            raise serializers.ValidationError("Authentication required for this operation.")
+        
+        try:
+            is_default = validated_data.get('is_default')
+
+            with transaction.atomic():
+                if is_default and is_default == True:
+                    models.AddressModel.objects.filter(user=request.user,is_default=True).exclude(id=instance.id).update(is_default=False)
+
+                return super().update(instance, validated_data)
+        except IntegrityError:
+            raise serializers.ValidationError("Only one default address is valid.")
+    
+
+
+
+
+
+
+
+
+
+
 class AdminUserListSerializer(serializers.ModelSerializer):
 
     class Meta:
