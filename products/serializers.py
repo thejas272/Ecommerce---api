@@ -7,7 +7,7 @@ from accounts.helpers import create_audit_log
 
 class CategoryCreateSerializer(serializers.ModelSerializer):
     name   = serializers.CharField(required=True)
-    parent = serializers.PrimaryKeyRelatedField(queryset   = models.CategoryModel.objects.all(),
+    parent = serializers.PrimaryKeyRelatedField(queryset   = models.CategoryModel.objects.filter(is_active=True),
                                                 required   = False,
                                                 allow_null = True
                                                 )
@@ -92,6 +92,11 @@ class CategorySerializer(serializers.ModelSerializer):
 
 
 class CategoryUpdateSerializer(serializers.ModelSerializer):
+    parent = serializers.PrimaryKeyRelatedField(queryset   = models.CategoryModel.objects.filter(is_active=True),
+                                                required   = False,
+                                                allow_null = True
+                                               )
+    
     class Meta:
         model = models.CategoryModel
         fields = ["id","name","parent","slug","is_active","created_at","updated_at"]
@@ -267,10 +272,10 @@ class BrandUpdateSerializer(serializers.ModelSerializer):
 
 class ProductCreateSerializer(serializers.ModelSerializer):
     name     = serializers.CharField(required=True)
-    category = serializers.PrimaryKeyRelatedField(queryset = models.CategoryModel.objects.all(),
+    category = serializers.PrimaryKeyRelatedField(queryset = models.CategoryModel.objects.filter(is_active=True),
                                                   required=True,
                                                  ) 
-    brand    = serializers.PrimaryKeyRelatedField(queryset = models.BrandModel.objects.all(),
+    brand    = serializers.PrimaryKeyRelatedField(queryset = models.BrandModel.objects.filter(is_active=True),
                                                   required=True,
                                                  )
     description = serializers.CharField(required=False, allow_null=True, allow_blank=True)
@@ -365,6 +370,13 @@ class ProductSerializer(serializers.ModelSerializer):
 
 
 class ProductUpdateSerializer(serializers.ModelSerializer):
+    category = serializers.PrimaryKeyRelatedField(queryset = models.CategoryModel.objects.filter(is_active=True),
+                                                  required=True
+                                                 )
+    brand = serializers.PrimaryKeyRelatedField(queryset = models.BrandModel.objects.filter(is_active=True),
+                                               required=True
+                                              )
+                                              
 
     class Meta:
         model = models.ProductModel
