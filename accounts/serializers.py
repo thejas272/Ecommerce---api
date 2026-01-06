@@ -334,9 +334,11 @@ class AddressUpdateSerializer(serializers.ModelSerializer):
     
 
 
+class AddressNestedSerializer(serializers.ModelSerializer):
 
-
-
+    class Meta:
+        model = models.AddressModel
+        fields = ["name","phone","address_line","city","state","pincode",]
 
 
 

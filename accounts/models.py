@@ -31,7 +31,7 @@ class AuditLog(models.Model):
 
 
 class AddressModel(models.Model):
-    user         = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=False, blank=False)
+    user         = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="addresses", on_delete=models.CASCADE, null=False, blank=False)
     name         = models.CharField(max_length=300, null=False, blank=False)
     phone        = PhoneNumberField(null=False, blank=False)
     address_line = models.TextField(null=False, blank=False)

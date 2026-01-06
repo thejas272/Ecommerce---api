@@ -103,3 +103,18 @@ class UpdateCartQuantitySerializer(serializers.ModelSerializer):
     
         
 
+class CartNestedSerializer(serializers.ModelSerializer):
+    product_id = serializers.IntegerField(source="product.id", read_only=True)
+
+    product_name  = serializers.CharField(source = "product.name", read_only=True)
+    brand_name    = serializers.CharField(source = "product.brand.name", read_only=True)
+    category_name = serializers.CharField(source = "product.category.name", read_only=True)
+    
+    product_slug  = serializers.CharField(source = "product.slug", read_only=True)
+    brand_slug    = serializers.CharField(source = "product.brand.slug", read_only=True)
+    category_slug = serializers.CharField(source = "product.category.slug", read_only=True)
+
+
+    class Meta:
+        model = carts_models.CartModel
+        fields = ["product_id","product_name","brand_name","category_name","product_slug","brand_slug","category_slug","unit_price","quantity","total_price"]
