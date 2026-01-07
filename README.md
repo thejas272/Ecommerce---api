@@ -63,6 +63,7 @@ The project focuses on clean REST design, JWT-based authentication, role-based a
   - Access controlled using:
     - `IsAuthenticated`
     - `DjangoModelPermissions`
+    - `IsAdminUser`
   - Can view **active + inactive** records
   - Can create, update, soft-delete, and restore records
   - Uses ID-based access
