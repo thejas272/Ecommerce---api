@@ -3,5 +3,6 @@ from orders import views
 
 urlpatterns = [
     path('checkout/',views.CheckoutPreviewAPIView.as_view(), name="checkout-preview"),
-    path('',views.OrderCreateAPIView.as_view(), name="place-order"),
+    path('',views.OrderAPIView.as_view(), name="order-create-list"),
+    path('<str:id>/',views.OrderDetailAPIView.as_view(), name="order-detail"),
 ]

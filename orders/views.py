@@ -1,12 +1,12 @@
 from django.shortcuts import render
 from rest_framework.generics import GenericAPIView
 from rest_framework.permissions import AllowAny,IsAuthenticated
-from orders.serializers import CheckoutPreviewSerializer
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework.response import Response
 from rest_framework import status
 from orders.helpers import calculate_checkout_price
 from django.db import transaction
+from common.pagination import DefaultPagination
 from rest_framework import serializers as drf_serializers
 from products import models as product_models
 from payments import models as payment_models
@@ -14,15 +14,15 @@ from accounts import models as accounts_models
 from carts import models as carts_models
 from orders import models as orders_models
 from orders.helpers import calculate_checkout_price
+from orders import serializers as orders_serializers
 
 # Create your views here.
 
 
 class CheckoutPreviewAPIView(GenericAPIView):
     permission_classes = [IsAuthenticated]
-    serializer_class = CheckoutPreviewSerializer
 
-    @swagger_auto_schema(tags=["Order"])
+    @swagger_auto_schema(tags=["Order"], request_body=None, responses={200: orders_serializers.CheckoutPreviewResponseSerializer})
     def post(self,request):
         default_address = accounts_models.AddressModel.objects.filter(user=request.user,is_default=True).first()
 
@@ -34,6 +34,7 @@ class CheckoutPreviewAPIView(GenericAPIView):
         if not cart_items.exists():
             return Response({"detail":"Please add items to your cart to checkout."},status=status.HTTP_400_BAD_REQUEST)
         
+
         product_ids = cart_items.values_list("product_id",flat=True)
         products = product_models.ProductModel.objects.filter(id__in=product_ids)
 
@@ -46,6 +47,7 @@ class CheckoutPreviewAPIView(GenericAPIView):
                                                    }for p in inactive_products
                                                  )
 
+
         subtotal,shipping_fee,grand_total = calculate_checkout_price(cart_items)
         data = {
             "address"      : default_address,
@@ -55,16 +57,17 @@ class CheckoutPreviewAPIView(GenericAPIView):
             "grand_total"  : grand_total
         }
 
-        serializer = self.serializer_class(instance=data)
+        serializer = orders_serializers.CheckoutPreviewResponseSerializer(instance=data)
 
         return Response(serializer.data, status=status.HTTP_200_OK)
     
 
 
-class OrderCreateAPIView(GenericAPIView):
+class OrderAPIView(GenericAPIView):
     permission_classes = [IsAuthenticated]
+    pagination_class = DefaultPagination
 
-    @swagger_auto_schema(tags=["Order"])
+    @swagger_auto_schema(tags=["Order"], request_body=None)
     def post(self,request):
         default_address = accounts_models.AddressModel.objects.filter(user=request.user,is_default=True).first()
 
@@ -155,7 +158,40 @@ class OrderCreateAPIView(GenericAPIView):
                          "status":order.status,
                          "detail":"Order created."
                         }, status=status.HTTP_201_CREATED)
+    
+    
+    @swagger_auto_schema(tags=["Order"], request_body=None, responses={200: orders_serializers.OrderListSerializer})
+    def get(self,request):
+        orders = orders_models.OrderModel.objects.filter(user=request.user)
+
+        paginator = self.pagination_class()
+        page = paginator.paginate_queryset(orders, request)
+
+        serializer = orders_serializers.OrderListSerializer(page, many=True)
+
+        return paginator.get_paginated_response(serializer.data)
+    
+
+
+class OrderDetailAPIView(GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    lookup_field = "order_id"
+    serializer_class = orders_serializers.OrderDetailSerializer
+    
+    @swagger_auto_schema(tags=["Order"], responses={200: orders_serializers.OrderDetailSerializer})
+    def get(self,request,id):
+        try:
+            order_instance = orders_models.OrderModel.objects.filter(user=request.user).prefetch_related('items').get(order_id=id)
+        except orders_models.OrderModel.DoesNotExist:
+            return Response({"detail":"Invalid order ID."},status=status.HTTP_400_BAD_REQUEST)
+        
+
+        serializer = self.serializer_class(instance=order_instance)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
+        
+        
 
 
 
-            
+
