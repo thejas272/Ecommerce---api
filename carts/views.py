@@ -33,7 +33,7 @@ class CartListCreateAPIView(GenericAPIView):
 
     @swagger_auto_schema(tags=["Cart"])
     def get(self,request):
-        cart_items = cart_models.CartModel.objects.filter(user=request.user).select_related("product","product__brand","product__category")
+        cart_items = cart_models.CartModel.objects.filter(user=request.user).select_related("product","product__brand","product__category").order_by('-created_at')
 
         paginator = self.pagination_class() 
         page = paginator.paginate_queryset(cart_items,request)

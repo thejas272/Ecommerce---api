@@ -43,3 +43,22 @@ class OrderDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.OrderModel
         fields = ["order_id","status","name","phone","address_line","city","state","pincode","subtotal","shipping_fee","grand_total","created_at","order_items"]
+
+
+
+class OrderCancelSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = models.OrderModel
+        fields = ["status","order_id"]
+        read_only_fields = ["status","order_id"]
+
+    
+    def update(self, instance, validated_data):
+        if instance.status in ["SHIPPED","DELIVERED"]:
+            raise serializers.ValidationError("Order cannot be cancelled once shipped.")
+        
+        instance.status = "CANCELLED"
+
+        instance.save()
+        return instance

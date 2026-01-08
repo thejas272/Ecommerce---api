@@ -1,4 +1,5 @@
 from django.shortcuts import render
+from rest_framework.views import APIView
 from rest_framework.generics import GenericAPIView
 from rest_framework.permissions import AllowAny,IsAuthenticated
 from drf_yasg.utils import swagger_auto_schema
@@ -19,7 +20,7 @@ from orders import serializers as orders_serializers
 # Create your views here.
 
 
-class CheckoutPreviewAPIView(GenericAPIView):
+class CheckoutPreviewAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(tags=["Order"], request_body=None, responses={200: orders_serializers.CheckoutPreviewResponseSerializer})
@@ -41,11 +42,12 @@ class CheckoutPreviewAPIView(GenericAPIView):
         inactive_products = [product for product in products if not product.is_active]
 
         if inactive_products:
-            raise drf_serializers.ValidationError({"product_id":p.id,
-                                                   "product_name":p.name,
-                                                   "product_slug":p.slug
-                                                   }for p in inactive_products
-                                                 )
+            raise drf_serializers.ValidationError({"inactive_products":[{"product_id":p.id,
+                                                                        "product_name":p.name,
+                                                                        "product_slug":p.slug
+                                                                        } for p in inactive_products
+                                                                      ]
+                                                  })
 
 
         subtotal,shipping_fee,grand_total = calculate_checkout_price(cart_items)
@@ -63,7 +65,7 @@ class CheckoutPreviewAPIView(GenericAPIView):
     
 
 
-class OrderAPIView(GenericAPIView):
+class OrderAPIView(APIView):
     permission_classes = [IsAuthenticated]
     pagination_class = DefaultPagination
 
@@ -89,12 +91,12 @@ class OrderAPIView(GenericAPIView):
             inactive_products = [product for product in products if not product.is_active]
 
             if inactive_products:
-                raise drf_serializers.ValidationError({"product_id":p.id,
-                                                       "product_name":p.name,
-                                                       "product_slug":p.slug,
-                                                       "message":"Product unavailable."
-                                                       } for p in inactive_products
-                                                     )
+                raise drf_serializers.ValidationError({"inactive_products":[{"product_id":p.id,
+                                                                             "product_name":p.name,
+                                                                             "product_slug":p.slug
+                                                                             }for p in inactive_products
+                                                                           ]
+                                                      })
 
             product_map = {product.id : product for product in products}
            
@@ -162,7 +164,7 @@ class OrderAPIView(GenericAPIView):
     
     @swagger_auto_schema(tags=["Order"], request_body=None, responses={200: orders_serializers.OrderListSerializer})
     def get(self,request):
-        orders = orders_models.OrderModel.objects.filter(user=request.user)
+        orders = orders_models.OrderModel.objects.filter(user=request.user).order_by('-created_at')
 
         paginator = self.pagination_class()
         page = paginator.paginate_queryset(orders, request)
@@ -176,19 +178,39 @@ class OrderAPIView(GenericAPIView):
 class OrderDetailAPIView(GenericAPIView):
     permission_classes = [IsAuthenticated]
     lookup_field = "order_id"
-    serializer_class = orders_serializers.OrderDetailSerializer
+
+    def get_serializer_class(self):
+        if self.request.method == "PATCH":
+            return orders_serializers.OrderCancelSerializer
+        return orders_serializers.OrderDetailSerializer
     
     @swagger_auto_schema(tags=["Order"], responses={200: orders_serializers.OrderDetailSerializer})
     def get(self,request,id):
         try:
             order_instance = orders_models.OrderModel.objects.filter(user=request.user).prefetch_related('items').get(order_id=id)
         except orders_models.OrderModel.DoesNotExist:
-            return Response({"detail":"Invalid order ID."},status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail":"Invalid order ID."},status=status.HTTP_404_NOT_FOUND)
         
 
-        serializer = self.serializer_class(instance=order_instance)
+        serializer = self.get_serializer(instance=order_instance)
 
         return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    @swagger_auto_schema(tags=["Order"], request_body=None)
+    def patch(self,request,id):
+        try:
+            order_instance = orders_models.OrderModel.objects.get(order_id=id,user=request.user)
+        except orders_models.OrderModel.DoesNotExist:
+            return Response({"detail":"Invalid order id."},status=status.HTTP_404_NOT_FOUND)
+        
+
+        serializer = self.get_serializer(instance=order_instance, data={}, partial=True)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
         
 
