@@ -16,7 +16,7 @@ from carts import models as carts_models
 from orders import models as orders_models
 from orders.helpers import calculate_checkout_price
 from orders import serializers as orders_serializers
-from common.helpers import success_response,error_response
+from common.helpers import success_response,error_response, normalize_validation_errors
 
 # Create your views here.
 
@@ -75,8 +75,9 @@ class CheckoutPreviewAPIView(APIView):
                                    )
         
         except drf_serializers.ValidationError as e:
-            return error_response(message = e.detail.get("message"),
-                                  data    = e.detail.get("data"),
+            message,data = normalize_validation_errors(e.detail)
+            return error_response(message = message,
+                                  data    = data,
                                   status_code = status.HTTP_400_BAD_REQUEST
                                  )
 
@@ -188,8 +189,9 @@ class OrderAPIView(APIView):
                                        )
         
         except drf_serializers.ValidationError as e:
-            return error_response(message = e.detail.get("message"),
-                                  data    = e.detail.get("data"),
+            message,data = normalize_validation_errors(e.detail)
+            return error_response(message = message,
+                                  data    = data,
                                   status_code = status.HTTP_400_BAD_REQUEST
                                  )
         
@@ -222,7 +224,7 @@ class OrderDetailAPIView(GenericAPIView):
             order_instance = orders_models.OrderModel.objects.filter(user=request.user).prefetch_related('items').get(order_id=id)
         except orders_models.OrderModel.DoesNotExist:
             return error_response(message = "Invalid order ID.",
-                                  data={"order_id":id},
+                                  data    = {"order_id":id},
                                   status_code = status.HTTP_404_NOT_FOUND
                                  )
         
@@ -262,8 +264,9 @@ class OrderCancelAPIView(GenericAPIView):
                                         status_code = status.HTTP_200_OK
                                        )
         except drf_serializers.ValidationError as e:    
-            return error_response(message = e.detail.get("message"),
-                                  data    = e.detail.get("data"),
+            message,data = normalize_validation_errors(e.detail)
+            return error_response(message = message,
+                                  data    = data,
                                   status_code = status.HTTP_400_BAD_REQUEST
                                  )
         
