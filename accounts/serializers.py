@@ -98,18 +98,31 @@ class LogoutSerializer(serializers.Serializer):
     def validate(self, attrs):
         token = attrs.get("refresh")
 
+        request = self.context.get("request")
+        if not request or not request.user:
+            raise serializers.ValidationError("Authentication is needed for this operation.")
+
+
         try:
-            self.token = RefreshToken(token)
+            refresh_token = RefreshToken(token)
         except TokenError:
             raise serializers.ValidationError("Invalid or expired refresh token.")
-        
-        if self.token.token_type != "refresh":
+
+
+        if refresh_token.token_type != "refresh":
             raise serializers.ValidationError("Invalid token type.")
+
+
+        if int(refresh_token.get("user_id")) != request.user.id:
+            raise serializers.ValidationError("Refresh token doesn't belong to this user.") 
         
+        
+        attrs['refresh_token'] = refresh_token 
         return attrs
     
     def save(self, **kwargs):
-        self.token.blacklist()
+        refresh_token = self.validated_data["refresh_token"]
+        refresh_token.blacklist()
 
 
 

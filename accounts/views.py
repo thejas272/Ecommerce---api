@@ -72,7 +72,7 @@ class LogoutAPIView(GenericAPIView):
 
     @swagger_auto_schema(tags=['Authentication'])
     def post(self,request):
-        serializer = self.serializer_class(data=request.data)
+        serializer = self.serializer_class(data=request.data, context={"request":request})
 
         if serializer.is_valid():
             serializer.save()
@@ -81,7 +81,7 @@ class LogoutAPIView(GenericAPIView):
             message = f"{request.user.username} logged out."
             create_audit_log(user=request.user,action=action,instance=request.user,message=message)
 
-            return Response(status=status.HTTP_204_NO_CONTENT)
+            return Response({"detail":"User logged out susccessfuly."},status=status.HTTP_204_NO_CONTENT)
         
         return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
 
