@@ -7,7 +7,7 @@ from drf_yasg.utils import swagger_auto_schema
 from rest_framework.response import Response
 from rest_framework import status
 from common.pagination import DefaultPagination
-from common.helpers import success_response,error_response
+from common.helpers import success_response,error_response,normalize_validation_errors
 from rest_framework import serializers as drf_serializers
 # Create your views here.
 
@@ -34,8 +34,9 @@ class CartListCreateAPIView(GenericAPIView):
                                         status_code = status.HTTP_201_CREATED
                                     )
         except drf_serializers.ValidationError as e:
-            return error_response(message = e.detail.get("message"),
-                                  data    = e.detail.get("data"),
+            message,data = normalize_validation_errors(e.detail)
+            return error_response(message = message,
+                                  data    = data,
                                   status_code = status.HTTP_400_BAD_REQUEST
                                  )
     
@@ -104,7 +105,8 @@ class CartItemQuantityAPIView(GenericAPIView):
                                         status_code = status.HTTP_200_OK
                                     )
         except drf_serializers.ValidationError as e:
-            return error_response(message = e.detail.get("message"),
-                                  data    = e.detail.get("data"),
+            message,data = normalize_validation_errors(e.detail)
+            return error_response(message = message,
+                                  data    = data,
                                   status_code = status.HTTP_400_BAD_REQUEST
                                  )
