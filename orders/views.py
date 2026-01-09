@@ -209,14 +209,12 @@ class OrderAPIView(APIView):
     
 
 
+
+
 class OrderDetailAPIView(GenericAPIView):
     permission_classes = [IsAuthenticated]
     lookup_field = "order_id"
-
-    def get_serializer_class(self):
-        if self.request.method == "PATCH":
-            return orders_serializers.OrderCancelSerializer
-        return orders_serializers.OrderDetailSerializer
+    serializer_class = orders_serializers.OrderDetailSerializer
     
     @swagger_auto_schema(tags=["Order"], responses={200: orders_serializers.OrderDetailSerializer})
     def get(self,request,id):
@@ -224,6 +222,7 @@ class OrderDetailAPIView(GenericAPIView):
             order_instance = orders_models.OrderModel.objects.filter(user=request.user).prefetch_related('items').get(order_id=id)
         except orders_models.OrderModel.DoesNotExist:
             return error_response(message = "Invalid order ID.",
+                                  data={"order_id":id},
                                   status_code = status.HTTP_404_NOT_FOUND
                                  )
         
@@ -235,12 +234,21 @@ class OrderDetailAPIView(GenericAPIView):
                                )
     
     
-    @swagger_auto_schema(tags=["Order"], request_body=None)
+
+
+        
+class OrderCancelAPIView(GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    lookup_field = "order_id"
+    serializer_class = orders_serializers.OrderCancelSerializer
+
+    @swagger_auto_schema(tags=["Order"], request_body=None, responses={200: orders_serializers.OrderCancelSerializer})
     def patch(self,request,id):
         try:
             order_instance = orders_models.OrderModel.objects.get(order_id=id,user=request.user)
         except orders_models.OrderModel.DoesNotExist:
             return error_response(message = "Invalid order id.",
+                                  data={"order_id":id},
                                   status_code = status.HTTP_404_NOT_FOUND
                                  )
 
@@ -259,8 +267,4 @@ class OrderDetailAPIView(GenericAPIView):
                                   status_code = status.HTTP_400_BAD_REQUEST
                                  )
         
-        
-
-
-
 

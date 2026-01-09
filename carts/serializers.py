@@ -22,7 +22,9 @@ class AddToCartSerializer(serializers.ModelSerializer):
         
     def validate_quantity(self,value):
         if value <= 0:
-            raise serializers.ValidationError("Quantity cannot be zero or negative.")
+            raise serializers.ValidationError({"message":"Quantity cannot be zero or negative.",
+                                               "data":{"quantity":value}
+                                              })
         return value
         
 
@@ -39,7 +41,12 @@ class AddToCartSerializer(serializers.ModelSerializer):
             existing_cart_quantity = existing_cart_instance.quantity
 
         if quantity+existing_cart_quantity > product.stock:
-            raise serializers.ValidationError("Insufficient stock.") 
+            raise serializers.ValidationError({"message":"Insufficient stock.",
+                                               "data":{"quantity":quantity,
+                                                       "product_id":product.id,
+                                                       "existing_stock":product.stock
+                                                      }
+                                              }) 
 
         return attrs
     
@@ -86,14 +93,29 @@ class UpdateCartQuantitySerializer(serializers.ModelSerializer):
 
     def validate_quantity(self,value):
         if value <= 0:
-            raise serializers.ValidationError("Quantity cannot be zero or negative.")
+            raise serializers.ValidationError({"message":"Quantity cannot be zero or negative.",
+                                               "data":{"cart_id":self.instance.id,
+                                                       "quantity":value
+                                                      }
+                                               })
         return value
     
     def validate(self,attrs):
         quantity = attrs.get('quantity')
+        product_stock = self.instance.product.stock
 
-        if quantity > self.instance.product.stock:
-            raise serializers.ValidationError("insufficient stock.")
+        if quantity is None:
+            raise serializers.ValidationError({"message":"Quantity not provided.",
+                                              "data":{"cart_id":self.instance.id}
+                                              })
+
+        if quantity > product_stock:
+            raise serializers.ValidationError({"message":"insufficient stock.",
+                                               "data":{"cart_id":self.instance.id,
+                                                       "quantity":quantity,
+                                                       "existing_stock":product_stock
+                                                      }
+                                              })
         
         return attrs
     
