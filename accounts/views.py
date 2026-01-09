@@ -15,6 +15,8 @@ from accounts.filters.admin_users import admin_filter_users
 from accounts.filters.admin_logs import admin_filter_logs
 from rest_framework import serializers as drf_serializers
 from rest_framework.permissions import IsAdminUser
+from rest_framework_simplejwt.serializers import TokenRefreshSerializer
+
 # Create your views here.
 
 
@@ -41,7 +43,7 @@ class LoginAPIView(GenericAPIView):
     throttle_classes = [LoginRateThrottle]
     serializer_class = serializers.LoginSerializer
 
-    @swagger_auto_schema(tags=['Authentication'])
+    @swagger_auto_schema(tags=['Authentication'], request_body=serializers.LoginSerializer)
     def post(self,request):
         serializer = self.serializer_class(data=request.data)
 
@@ -92,7 +94,8 @@ class RefreshTokenAPIView(GenericAPIView):
     throttle_classes = [RefreshTokenRateThrottle]
     serializer_class = serializers.CustomRefreshTokenSerializer
 
-    @swagger_auto_schema(tags=['Authentication'])
+    @swagger_auto_schema(tags=['Authentication'], request_body=serializers.CustomRefreshTokenSerializer, 
+                         responses={200 : TokenRefreshSerializer})
     def post(self, request):
         serializer = self.serializer_class(data=request.data)
 
