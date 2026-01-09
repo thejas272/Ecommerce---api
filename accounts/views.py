@@ -90,18 +90,20 @@ class LogoutAPIView(GenericAPIView):
 class RefreshTokenAPIView(GenericAPIView):
     permission_classes = [AllowAny]
     throttle_classes = [RefreshTokenRateThrottle]
-    serializer_class = serializers.RefreshTokenSerializer
+    serializer_class = serializers.CustomRefreshTokenSerializer
 
     @swagger_auto_schema(tags=['Authentication'])
     def post(self, request):
         serializer = self.serializer_class(data=request.data)
 
         if serializer.is_valid():
-            refresh = serializer.validated_data["refresh_token"]
+            refresh = serializer.validated_data["refresh"]
+            access  = serializer.validated_data["access"]
 
-            access = refresh.access_token
-            return Response({"Access":str(access)},
-                            status=status.HTTP_200_OK)
+            return Response({"refresh":str(refresh),
+                             "access":str(access)
+                            },status=status.HTTP_200_OK
+                           )
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     

@@ -2,7 +2,8 @@ from rest_framework import serializers
 from accounts import models
 from django.db import IntegrityError,transaction
 from django.contrib.auth import authenticate
-from rest_framework_simplejwt.tokens import RefreshToken,TokenError
+from rest_framework_simplejwt.serializers import TokenRefreshSerializer
+from rest_framework_simplejwt.tokens import AccessToken,RefreshToken,TokenError
 import re
 from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, BlacklistedToken
 from django.conf import settings
@@ -86,6 +87,9 @@ class LoginSerializer(serializers.Serializer):
         if not user:
             raise serializers.ValidationError("Invalid credentials.")
         
+        if not user.is_active:
+            raise serializers.ValidationError("User account is not active.")
+        
         attrs["user"] = user
         
         return attrs
@@ -127,32 +131,43 @@ class LogoutSerializer(serializers.Serializer):
 
 
 
-class RefreshTokenSerializer(serializers.Serializer):
+class CustomRefreshTokenSerializer(serializers.Serializer):
     refresh = serializers.CharField(required=True)
 
     def validate(self, attrs):
 
         token = attrs.get('refresh')
 
-        try:
-            refresh = RefreshToken(token)
-        except TokenError:
-            raise serializers.ValidationError("Invalid or expired refresh token.")
         
-        if refresh.token_type != "refresh":
-            raise serializers.ValidationError("Invalid token type.")
-        
-        user_id = refresh.get("user_id")
+        jwt_serializer = TokenRefreshSerializer(data={"refresh":token})
 
         try:
-            user = models.User.objects.get(id=user_id)
+            jwt_serializer.is_valid(raise_exception=True)
+        except TokenError:
+            raise serializers.ValidationError("Invalid or expired refresh token.")
+
+        jwt_data = jwt_serializer.validated_data
+
+        access_token = AccessToken(jwt_data.get('access'))
+        user_id = access_token["user_id"]
+
+
+        
+        try:
+            user_instance = models.User.objects.get(id=user_id)
         except models.User.DoesNotExist:
-            raise serializers.ValidationError("User not found.")
+            raise serializers.ValidationError("User does not exist.")
+
+        if not user_instance.is_active:      
+            raise serializers.ValidationError("User account is not active.") 
         
-        if not user.is_active:
-            raise serializers.ValidationError("User account is inactive.")
-        
-        attrs["refresh_token"] = refresh
+
+
+        attrs["access"]  = jwt_data.get("access")
+        attrs["refresh"] = jwt_data.get("refresh")
+
+        if attrs["refresh"] is None:
+            raise serializers.ValidationError("Refresh token disabled.")
         
         return attrs
     
@@ -226,7 +241,11 @@ class UpdatePasswordSerializer(serializers.ModelSerializer):
         fields = ["old_password","new_password","confirm_password"]
 
     def validate(self, attrs):
-        request = self.context['request']
+        request = self.context.get('request')
+        if not request or not request.user:
+            raise serializers.ValidationError("Authentication required for this operation.")
+        
+
         user = request.user
 
         if not user.check_password(attrs["old_password"]):
@@ -238,8 +257,13 @@ class UpdatePasswordSerializer(serializers.ModelSerializer):
         return attrs
     
     def save(self, **kwargs):
-        user = self.context["request"].user
-        new_password = self.validated_data["new_password"]
+        request = self.context.get("request")
+        if not request or not request.user:
+            raise serializers.ValidationError("Authentication required for this operation.")
+
+
+        user = request.user
+        new_password = self.validated_data.get("new_password")
 
         with transaction.atomic():
             user.set_password(new_password)
