@@ -22,9 +22,7 @@ class AddToCartSerializer(serializers.ModelSerializer):
         
     def validate_quantity(self,value):
         if value <= 0:
-            raise serializers.ValidationError({"message":"Quantity cannot be zero or negative.",
-                                               "data":{"quantity":value}
-                                              })
+            raise serializers.ValidationError("Quantity cannot be zero or negative.")
         return value
         
 
@@ -40,7 +38,7 @@ class AddToCartSerializer(serializers.ModelSerializer):
         if existing_cart_instance is not None:
             existing_cart_quantity = existing_cart_instance.quantity
 
-        if quantity+existing_cart_quantity > product.stock:
+        if quantity + existing_cart_quantity > product.stock:
             raise serializers.ValidationError({"message":"Insufficient stock.",
                                                "data":{"quantity":quantity,
                                                        "product_id":product.id,
@@ -93,11 +91,7 @@ class UpdateCartQuantitySerializer(serializers.ModelSerializer):
 
     def validate_quantity(self,value):
         if value <= 0:
-            raise serializers.ValidationError({"message":"Quantity cannot be zero or negative.",
-                                               "data":{"cart_id":self.instance.id,
-                                                       "quantity":value
-                                                      }
-                                               })
+            raise serializers.ValidationError("Quantity cannot be zero or negative.")
         return value
     
     def validate(self,attrs):

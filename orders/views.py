@@ -29,15 +29,15 @@ class CheckoutPreviewAPIView(APIView):
         default_address = accounts_models.AddressModel.objects.filter(user=request.user,is_default=True).first()
 
         if not default_address:
-            return error_response(message="please add an address to continue checkout.",
-                                  status_code=status.HTTP_400_BAD_REQUEST
+            return error_response(message = "please add an address to continue checkout.",
+                                  status_code = status.HTTP_400_BAD_REQUEST
                                  )        
         
         cart_items = carts_models.CartModel.objects.filter(user=request.user).select_related('product','product__brand','product__category')
         
         if not cart_items.exists():
-            return error_response(message="Please add items to your cart to checkout.",
-                                  status_code=status.HTTP_400_BAD_REQUEST
+            return error_response(message = "Please add items to your cart to checkout.",
+                                  status_code = status.HTTP_400_BAD_REQUEST
                                  )
         
 
@@ -76,6 +76,7 @@ class CheckoutPreviewAPIView(APIView):
         
         except drf_serializers.ValidationError as e:
             message,data = normalize_validation_errors(e.detail)
+            
             return error_response(message = message,
                                   data    = data,
                                   status_code = status.HTTP_400_BAD_REQUEST

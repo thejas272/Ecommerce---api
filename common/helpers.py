@@ -1,6 +1,8 @@
 from rest_framework.response import Response
 
 
+# converts normalized data to success response
+
 def success_response(*,message,data=None,status_code=200):
 
     return Response({"status":True,
@@ -12,6 +14,7 @@ def success_response(*,message,data=None,status_code=200):
 
 
 
+# converts normalized data to error response
 
 def error_response(*,message,data=None,status_code=400):
     
@@ -25,12 +28,24 @@ def error_response(*,message,data=None,status_code=400):
 
 
 
+
 def normalize_validation_errors(detail):
 
+    # to catch and normalize exceptions raised delibarately. includes view, validate, create, update based exceptions.
     if isinstance(detail,dict) and "message" in detail:
-        return detail.get("message"),detail.get("data")
+        message = detail.get("message")
+        data    = detail.get("data") if detail.get("data") else {} 
+
+        if isinstance(message,list):     # to handle non field errors
+            message = message[0]     
+
+        return message,data 
     
+
+    # to catch and normalize field level exceptions raised by drf automatically.
     if isinstance(detail,dict):
-        return "Validation failed.",detail
+        return "Validation failed.",detail 
     
+    
+    # to catch and normalize exceptions that aren't returned as a dict
     return "Validation failed.",{"errors":detail}

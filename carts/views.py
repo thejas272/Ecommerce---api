@@ -90,7 +90,7 @@ class CartItemQuantityAPIView(GenericAPIView):
         try:
             cart_item = cart_models.CartModel.objects.get(id=id,user=request.user)
         except cart_models.CartModel.DoesNotExist:
-            return error_response(message = "Invalid Cart item id.",
+            return error_response(message = "Invalid Cart id.",
                                   data    = {"cart_id":id},
                                   status_code = status.HTTP_404_NOT_FOUND
                                  )
