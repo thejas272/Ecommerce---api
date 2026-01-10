@@ -43,12 +43,20 @@ class AdminCategoryAPIView(GenericAPIView):
     def post(self,request):
         serializer = self.get_serializer(data=request.data, context={"request":request})
         
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
+        try:
+            if serializer.is_valid(raise_exception=True):
+                serializer.save()
+                return success_response(message = "Category created successfuly.",
+                                        data    = serializer.data,
+                                        status_code = status.HTTP_201_CREATED
+                                       )
+        except drf_serializers.ValidationError as e:
+            message,data = normalize_validation_errors(e.detail)
+            return error_response(message = message,
+                                  data    = data,
+                                  status_code = status.HTTP_400_BAD_REQUEST)
         
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+
 
     @swagger_auto_schema(tags=["Admin - Categories"],
                          manual_parameters=[IS_ACTIVE_PARAM,PARENT_PARAM,CATEGORY_PARAM,SEARCH_PARAM]
@@ -96,10 +104,16 @@ class CategoryDetailAPIView(GenericAPIView):
         try:
             category = models.CategoryModel.objects.get(slug=slug, is_active=True)
         except models.CategoryModel.DoesNotExist:
-            raise NotFound("Category does not exist.")
+            return error_response(message = "Category does not exist,",
+                                  data    = {"category_slug":slug},
+                                  status_code = status.HTTP_404_NOT_FOUND
+                                 )
 
         serializer = self.serializer_class(category)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return success_response(message = "Category detail fetched successfuly.",
+                                data    = serializer.data,
+                                status_code = status.HTTP_200_OK
+                               )
     
 
 
@@ -119,23 +133,39 @@ class AdminCategoryDetailAPIView(GenericAPIView):
         try:
             category = models.CategoryModel.objects.get(id=id)
         except models.CategoryModel.DoesNotExist:
-            raise NotFound("Category does not exist.")
+            return error_response(message = "Category does not exist.",
+                                  data    = {"category_id":id},
+                                  status_code = status.HTTP_404_NOT_FOUND
+                                 )
 
         serializer = self.get_serializer(category, data=request.data, partial=True, context={"request":request})
 
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
+        try:
+            if serializer.is_valid(raise_exception=True):
+                serializer.save()
+                return success_response(message = "Category updated successfuly.",
+                                        data    = serializer.data,
+                                        status_code = status.HTTP_200_OK
+                                        )
+        except drf_serializers.ValidationError as e:
+            message,data = normalize_validation_errors(e.detail)
+
+            return error_response(message = message,
+                                  data    = data,
+                                  status_code = status.HTTP_400_BAD_REQUEST
+                                  )
         
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        
+
 
     @swagger_auto_schema(tags=["Admin - Categories"])
     def delete(self,request,id):
         try:
             category = models.CategoryModel.objects.get(id=id, is_active=True)
         except models.CategoryModel.DoesNotExist:
-            raise NotFound("Category does not exist.") 
+            return error_response(message = "Category does not exist.",
+                                  data    = {"category_id":id},
+                                  status_code = status.HTTP_404_NOT_FOUND
+                                 ) 
         
         action  = "SOFT_DELETE"
         message = f"Category {category.name} deactivated by {request.user.username}"
@@ -146,7 +176,14 @@ class AdminCategoryDetailAPIView(GenericAPIView):
 
             create_audit_log(user=request.user,action=action,instance=category,message=message) 
 
-        return Response({"detail":"Category deleted successfully."},status=status.HTTP_200_OK)
+        return success_response(message = "Category deleted successfuly.",
+                                data    = {"category_id":id,
+                                           "category_name":category.name
+                                          },
+                                status_code = status.HTTP_200_OK
+                               )
+    
+      
     
 
     @swagger_auto_schema(tags=["Admin - Categories"])
@@ -154,11 +191,17 @@ class AdminCategoryDetailAPIView(GenericAPIView):
         try:
             category = models.CategoryModel.objects.get(id=id)
         except models.CategoryModel.DoesNotExist:
-            raise NotFound("Category does not exist.")
+            return error_response(message = "Category does not exist.",
+                                  data    = {"category_id":id},
+                                  status_code = status.HTTP_404_NOT_FOUND
+                                 )
         
         serializer = self.get_serializer(category)
 
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return success_response(message = "Category detail fetched successfuly.",
+                                data    = serializer.data,
+                                status_code = status.HTTP_200_OK
+                               )
 
 # ---------------BRANDS------------------
 
@@ -178,11 +221,22 @@ class AdminBrandAPIView(GenericAPIView):
     def post(self,request):
         serializer = self.get_serializer(data=request.data, context={"request":request})
         
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
+        try:
+            if serializer.is_valid(raise_exception=True):
+                serializer.save()
+                return success_response(message = "Brand created successfuly,",
+                                        data    = serializer.data,
+                                        status_code = status.HTTP_201_CREATED
+                                    )
+            
+        except drf_serializers.ValidationError as e:
+            message,data = normalize_validation_errors(e.detail)
+            
+            return error_response(message = message,
+                                  data    = data,
+                                  status_code = status.HTTP_400_BAD_REQUEST
+                                 )
         
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
     @swagger_auto_schema(tags=["Admin - Brands"],
                          manual_parameters=[IS_ACTIVE_PARAM,BRAND_PARAM,SEARCH_PARAM])
@@ -229,10 +283,17 @@ class BrandDetailAPIView(GenericAPIView):
         try:
             brand = models.BrandModel.objects.get(slug=slug, is_active=True)
         except models.BrandModel.DoesNotExist:
-            raise NotFound("Brand does not exist.")
+            return error_response(message = "Brand does not exist.",
+                                  data    = {"brand_slug":slug},
+                                  status_code = status.HTTP_404_NOT_FOUND
+                                 )
+
 
         serializer = self.serializer_class(brand)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return success_response(message = "Brand detail fetched successfuly",
+                                data    = serializer.data,
+                                status_code = status.HTTP_200_OK
+                               )
 
 
 
@@ -252,14 +313,29 @@ class AdminBrandDetailAPIView(GenericAPIView):
         try:
             brand = models.BrandModel.objects.get(id=id)
         except models.BrandModel.DoesNotExist:
-            raise NotFound("Brand does not exist.")
+            return error_response(message="Brand does not exist.",
+                                  data={"brand_id":id},
+                                  status_code = status.HTTP_404_NOT_FOUND
+                                 )
 
         serializer = self.get_serializer(brand, data=request.data, partial=True, context={"request":request})
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        try:    
+            if serializer.is_valid(raise_exception=True):
+                serializer.save()
+                return success_response(message = "Brand updated successfuly.",
+                                        data    = serializer.data,
+                                        status_code = status.HTTP_200_OK
+                                       )
+            
+        except drf_serializers.ValidationError as e:
+            message,data = normalize_validation_errors(e.detail)
+
+            return error_response(message = message,
+                                  data    = data,
+                                  status_code = status.HTTP_400_BAD_REQUEST
+                                 )
         
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
     @swagger_auto_schema(tags=["Admin - Brands"])
@@ -267,7 +343,11 @@ class AdminBrandDetailAPIView(GenericAPIView):
         try:
             brand = models.BrandModel.objects.get(id=id, is_active=True)
         except models.BrandModel.DoesNotExist:
-            raise NotFound("Brand does not exist.")
+            return error_response(message = "Brand does not exist.",
+                                  data    = {"brand_id":id},
+                                  status_code = status.HTTP_404_NOT_FOUND
+                                 )
+        
 
         action  = "SOFT_DELETE"
         message = f"Brand {brand.name} deactivated by {request.user.username}"
@@ -278,7 +358,12 @@ class AdminBrandDetailAPIView(GenericAPIView):
 
             create_audit_log(user=request.user,action=action,instance=brand,message=message)
 
-        return Response({"detail":"Brand deleted successfully"}, status=status.HTTP_200_OK)
+        return success_response(message="Brand deleted successfuly.",
+                                data={"brand_id":id,
+                                      "brand_name":brand.name
+                                     },
+                                status_code = status.HTTP_200_OK
+                               )
     
 
     @swagger_auto_schema(tags=["Admin - Brands"])
@@ -286,15 +371,25 @@ class AdminBrandDetailAPIView(GenericAPIView):
         try:
             brand = models.BrandModel.objects.get(id=id)
         except models.BrandModel.DoesNotExist:
-            raise NotFound("Brand does not exist.")
+            return error_response(message = "Brand does not exist.",
+                                  data    = {"brand_id":id},
+                                  status_code = status.HTTP_404_NOT_FOUND
+                                 )
+        
         
         serializer = self.get_serializer(brand)
 
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return success_response(message = "Brand data fetched successfuly.",
+                                data    = serializer.data,
+                                status_code = status.HTTP_200_OK
+                               )
+    
 
 
 
 # ------------ PRODUCTS ---------------
+
+
 
 
 class AdminProductAPIView(GenericAPIView):
@@ -311,11 +406,22 @@ class AdminProductAPIView(GenericAPIView):
     def post(self,request):
         serializer = self.get_serializer(data=request.data, context={"request":request})
 
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
+        try:
+            if serializer.is_valid(raise_exception=True):
+                serializer.save()
+                return success_response(message="Product created successfuly.",
+                                        data = serializer.data,
+                                        status_code = status.HTTP_201_CREATED
+                                    )
+            
+        except drf_serializers.ValidationError as e:
+            message,data = normalize_validation_errors(e.detail)
+
+            return error_response(message = message,
+                                  data    = data,
+                                  status_code = status.HTTP_400_BAD_REQUEST
+                                 )
         
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
     @swagger_auto_schema(tags=["Admin - Products"],
                          manual_parameters=[CATEGORY_PARAM,BRAND_PARAM,SEARCH_PARAM,MIN_PRICE_PARAM,MAX_PRICE_PARAM,IS_ACTIVE_PARAM]
@@ -363,6 +469,7 @@ class ProductListAPIView(GenericAPIView):
 
 
 
+
 class ProductDetailAPIView(GenericAPIView):
     permission_classes = [AllowAny]
     serializer_class = serializers.ProductSerializer
@@ -373,11 +480,19 @@ class ProductDetailAPIView(GenericAPIView):
         try:
             product = models.ProductModel.objects.get(slug=slug, is_active=True)
         except models.ProductModel.DoesNotExist:
-            raise NotFound("Product does not exist.")
+            return error_response(message = "Product does not exist.",
+                                  data    = {"product_slug":slug},
+                                  status_code = status.HTTP_404_NOT_FOUND
+                                 )
         
+
         serializer = self.serializer_class(product)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return success_response(message="Product data fetched successfuly.",
+                                data = serializer.data,
+                                status_code =status.HTTP_200_OK
+                               )
     
+
 
 
 class AdminProductDetailAPIView(GenericAPIView):
@@ -396,22 +511,39 @@ class AdminProductDetailAPIView(GenericAPIView):
         try:
             product = models.ProductModel.objects.get(id=id)
         except models.ProductModel.DoesNotExist:
-            raise NotFound("Product does not exist.")
+                return error_response(message = "Product does not exist.",
+                                      data    = {"product_id":id},
+                                      status_code = status.HTTP_404_NOT_FOUND
+                                     )
 
         serializer = self.get_serializer(product, data=request.data, partial=True, context={"request":request})
 
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            if serializer.is_valid(raise_exception=True):
+                serializer.save()
+                return success_response(message = "Product updated successfuly.",
+                                        data    = serializer.data,
+                                        status_code = status.HTTP_200_OK
+                                    )
+        except drf_serializers.ValidationError as e:
+            message,data = normalize_validation_errors(e.detail)
+
+            return error_response(message = message,
+                                  data    = data,
+                                  status_code = status.HTTP_400_BAD_REQUEST
+                                 )
+
 
     @swagger_auto_schema(tags=["Admin - Products"])
     def delete(self,request,id):
         try:
             product = models.ProductModel.objects.get(id=id,is_active=True)
         except models.ProductModel.DoesNotExist:
-            raise NotFound("Product does not exist.")
+            return error_response(message="Product does not exist.",
+                                  data = {"product_id":id},
+                                  status_code =  status.HTTP_404_NOT_FOUND
+                                 )
+
         
         action = "SOFT_DELETE"
         message = f"Product {product.name} deactivated by {request.user.username}"
@@ -422,7 +554,14 @@ class AdminProductDetailAPIView(GenericAPIView):
 
             create_audit_log(user=request.user,action=action,instance=product,message=message)
 
-        return Response({"detail":"Product deleted successfully."}, status=status.HTTP_200_OK)
+        return success_response(message="Product deleted successfuly",
+                                data={"product_id":id,
+                                      "product_name":product.name
+                                      },
+                                status_code = status.HTTP_200_OK
+                                )
+
+
     
 
     @swagger_auto_schema(tags=["Admin - Products"])
@@ -430,9 +569,16 @@ class AdminProductDetailAPIView(GenericAPIView):
         try:
             product = models.ProductModel.objects.get(id=id)
         except models.ProductModel.DoesNotExist:
-            raise NotFound("Product does not exist.")
+            return error_response(message="Product does not exist.",
+                                  data={"product_id":id},
+                                  status_code = status.HTTP_404_NOT_FOUND
+                                 )
+
         
         serializer = self.get_serializer(product)
 
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
+        return success_response(message="Product data fetched successfuly.",
+                                data =serializer.data,
+                                status_code = status.HTTP_200_OK
+                               )
+    
