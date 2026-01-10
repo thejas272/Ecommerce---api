@@ -32,14 +32,14 @@ def error_response(*,message,data=None,status_code=400):
 def normalize_validation_errors(detail):
 
     # to catch and normalize exceptions raised delibarately. includes view, validate, create, update based exceptions.
-    if isinstance(detail,dict) and "message" in detail:
-        message = detail.get("message")
+    if isinstance(detail,dict) and "error_message" in detail:
+        error_message = detail.get("error_message")
         data    = detail.get("data") if detail.get("data") else {} 
 
-        if isinstance(message,list):     # to handle non field errors
-            message = message[0]     
+        if isinstance(error_message,list):     # to handle non field errors
+            error_message = error_message[0]     
 
-        return message,data 
+        return error_message,data 
     
 
     # to catch and normalize field level exceptions raised by drf automatically.

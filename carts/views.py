@@ -33,8 +33,10 @@ class CartListCreateAPIView(GenericAPIView):
                                         data    = serializer.data,
                                         status_code = status.HTTP_201_CREATED
                                     )
+            
         except drf_serializers.ValidationError as e:
             message,data = normalize_validation_errors(e.detail)
+
             return error_response(message = message,
                                   data    = data,
                                   status_code = status.HTTP_400_BAD_REQUEST
@@ -103,9 +105,11 @@ class CartItemQuantityAPIView(GenericAPIView):
                 return success_response(message = "Cart item quantity updated successfuly.",
                                         data    = serializer.data,
                                         status_code = status.HTTP_200_OK
-                                    )
+                                       )
+                                    
         except drf_serializers.ValidationError as e:
             message,data = normalize_validation_errors(e.detail)
+
             return error_response(message = message,
                                   data    = data,
                                   status_code = status.HTTP_400_BAD_REQUEST

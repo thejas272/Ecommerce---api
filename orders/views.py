@@ -49,7 +49,7 @@ class CheckoutPreviewAPIView(APIView):
             inactive_products = [product for product in products if not product.is_active]
 
             if inactive_products:
-                raise drf_serializers.ValidationError({"message":"Some products are no longer available.",
+                raise drf_serializers.ValidationError({"error_message":"Some products are no longer available.",
                                                        "data":[{"product_id":p.id,
                                                                 "product_name":p.name,
                                                                 "product_slug":p.slug
@@ -115,7 +115,7 @@ class OrderAPIView(APIView):
                 inactive_products = [product for product in products if not product.is_active]
 
                 if inactive_products:
-                    raise drf_serializers.ValidationError({"message":"Some products are no longer available.",
+                    raise drf_serializers.ValidationError({"error_message":"Some products are no longer available.",
                                                            "data":[{"product_id":p.id,
                                                                     "product_name":p.name,
                                                                     "product_slug":p.slug
@@ -130,7 +130,7 @@ class OrderAPIView(APIView):
                     product_instance = product_map[cart_item.product_id]
 
                     if cart_item.quantity > product_instance.stock:
-                        raise drf_serializers.ValidationError({"message":"Insufficient stock.",
+                        raise drf_serializers.ValidationError({"error_message":"Insufficient stock.",
                                                                "data":{"product_id":product_instance.id,
                                                                        "product_name":product_instance.name,
                                                                        "product_slug":product_instance.slug,

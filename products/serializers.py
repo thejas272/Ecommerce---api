@@ -34,7 +34,7 @@ class CategoryCreateSerializer(serializers.ModelSerializer):
         request = self.context.get("request")
 
         if not request or not request.user:
-            raise serializers.ValidationError({"message":"User authentication required for this operation."})
+            raise serializers.ValidationError({"error_message":"User authentication required for this operation."})
         
         action  = "CREATE"
         message = f"New category {validated_data['name']} created by {request.user.username}"
@@ -46,7 +46,7 @@ class CategoryCreateSerializer(serializers.ModelSerializer):
                 return category
 
         except IntegrityError:
-            raise serializers.ValidationError({"message":"Category already exists.",
+            raise serializers.ValidationError({"error_message":"Category already exists.",
                                                "data":{
                                                         "category_name":validated_data["name"]
                                                       }
@@ -128,7 +128,7 @@ class CategoryUpdateSerializer(serializers.ModelSerializer):
         request = self.context.get("request")
 
         if not request or not request.user:
-            raise serializers.ValidationError({"message":"User authentication required for this operation."})
+            raise serializers.ValidationError({"error_message":"User authentication required for this operation."})
         
         action  = "UPDATE"
         changes = {}
@@ -153,7 +153,7 @@ class CategoryUpdateSerializer(serializers.ModelSerializer):
 
                 return category
         except IntegrityError:
-            raise serializers.ValidationError({"message":"Category already exists.",
+            raise serializers.ValidationError({"error_message":"Category already exists.",
                                                "data":{
                                                         "category_name":validated_data["name"]
                                                       }
@@ -189,7 +189,7 @@ class BrandCreateSerializer(serializers.ModelSerializer):
         request = self.context.get("request")
 
         if not request or not request.user:
-            raise serializers.ValidationError({"message":"User authentication required for this operation."})
+            raise serializers.ValidationError({"error_message":"User authentication required for this operation."})
         
         action  = "CREATE"
         message = f"Brand {validated_data["name"]} created by {request.user.username}"
@@ -202,9 +202,11 @@ class BrandCreateSerializer(serializers.ModelSerializer):
 
                 return brand
         except IntegrityError:
-            raise serializers.ValidationError({"message":"Brand already exists.",
+            raise serializers.ValidationError({"error_message":"Brand already exists.",
                                                "data":{"brand_name":validated_data["name"]}
                                              })
+
+
 
 
 class AdminBrandSerializer(serializers.ModelSerializer):
@@ -245,7 +247,7 @@ class BrandUpdateSerializer(serializers.ModelSerializer):
         request = self.context.get("request")
 
         if not request or not request.user:
-            raise serializers.ValidationError({"message":"User authentication required for this operation."})
+            raise serializers.ValidationError({"error_message":"User authentication required for this operation."})
         
         action = "UPDATE"
         changes = {}
@@ -271,7 +273,7 @@ class BrandUpdateSerializer(serializers.ModelSerializer):
 
                 return brand
         except IntegrityError:
-            raise serializers.ValidationError({"message":"Brand already exists.",
+            raise serializers.ValidationError({"error_message":"Brand already exists.",
                                                "data":{"brand_name":validated_data["name"]}
                                              })
 
@@ -337,7 +339,7 @@ class ProductCreateSerializer(serializers.ModelSerializer):
         request = self.context.get("request")
 
         if not request or not request.user:
-            raise serializers.ValidationError({"message":"User authentication required for this operation."})
+            raise serializers.ValidationError({"error_message":"User authentication required for this operation."})
         
         action  = "CREATE"
         message = f"Product {validated_data['name']} created by {request.user.username}"
@@ -349,7 +351,7 @@ class ProductCreateSerializer(serializers.ModelSerializer):
 
                 return product
         except IntegrityError:
-            raise serializers.ValidationError({"message":"This brand already has a product with the same name.",
+            raise serializers.ValidationError({"error_message":"This brand already has a product with the same name.",
                                                "data":{"product_name":validated_data["name"],
                                                        "brand_name":validated_data["brand"].name
                                                       }
@@ -444,7 +446,7 @@ class ProductUpdateSerializer(serializers.ModelSerializer):
         request = self.context.get("request")
 
         if not request or not request.user:
-            raise serializers.ValidationError({"message":"User authentication required for this operation."})
+            raise serializers.ValidationError({"error_message":"User authentication required for this operation."})
         
         action = "UPDATE"
         changes = {}
@@ -469,7 +471,7 @@ class ProductUpdateSerializer(serializers.ModelSerializer):
 
                 return product
         except IntegrityError:
-            raise serializers.ValidationError({"message":"This brand already has a product with the same name.",
+            raise serializers.ValidationError({"error_message":"This brand already has a product with the same name.",
                                                "data":{"product_name":validated_data["name"],
                                                        "brand_name":validated_data["brand"].name
                                                       }

@@ -56,7 +56,7 @@ class OrderCancelSerializer(serializers.ModelSerializer):
     
     def update(self, instance, validated_data):
         if instance.status in ["SHIPPED","DELIVERED"]:
-            raise serializers.ValidationError({"message":"Order cannot be cancelled once shipped.",
+            raise serializers.ValidationError({"error_message":"Order cannot be cancelled once shipped.",
                                                "data":{"order_id":instance.order_id,
                                                        "order_status":instance.status
                                                       }
