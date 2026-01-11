@@ -16,6 +16,7 @@ from accounts.filters.admin_logs import admin_filter_logs
 from rest_framework import serializers as drf_serializers
 from rest_framework.permissions import IsAdminUser
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
+from common.helpers import success_response,error_response,normalize_validation_errors
 
 # Create your views here.
 
@@ -30,12 +31,23 @@ class RegisterAPIView(GenericAPIView):
 
         serializer = self.serializer_class(data=request.data)
 
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        try:
+            if serializer.is_valid(raise_exception=True):
+                serializer.save()
+                return success_response(message = "Registration successful.",
+                                        data    = serializer.data,
+                                        status_code = status.HTTP_201_CREATED
+                                       )
+
         
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+        except drf_serializers.ValidationError as e:
+            message,data = normalize_validation_errors(e.detail)
+
+            return error_response(message = message,
+                                  data    = data,
+                                  status_code = status.HTTP_400_BAD_REQUEST
+                                 )
+        
 
 
 class LoginAPIView(GenericAPIView):
@@ -47,24 +59,39 @@ class LoginAPIView(GenericAPIView):
     def post(self,request):
         serializer = self.serializer_class(data=request.data)
 
-        if serializer.is_valid():
-            user = serializer.validated_data.get('user')
-            if user:
+        try:
+            if serializer.is_valid(raise_exception=True):
+
+                user = serializer.validated_data['user']
+                
                 try:
                     refresh = RefreshToken.for_user(user)
                     access = refresh.access_token
-                except Exception:
-                    return Response({"detail":"Login failed. Please try again."},status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-                
+                except Exception as e:
+                    return error_response(message = "Login failed, please try again.",
+                                          status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+                                         )
+                    
                 action = "LOGIN"
                 message = f"{user.username} logged in."
                 create_audit_log(user=user,action=action,instance=user,message=message)
 
-                return Response({"Refresh":str(refresh),
-                                 "Access":str(access)
-                                },status=status.HTTP_200_OK
-                                )
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                return success_response(message = "User login successful.",
+                                        data    = {"refresh":str(refresh),
+                                                   "access":str(access)
+                                                  },
+                                        status_code = status.HTTP_200_OK
+                                       )
+                
+
+        except drf_serializers.ValidationError as e:
+            message,data = normalize_validation_errors(e.detail)
+
+            return error_response(message = message,
+                                  data    = data,
+                                  status_code = status.HTTP_400_BAD_REQUEST
+                                 )
+        
 
 
 
@@ -76,16 +103,26 @@ class LogoutAPIView(GenericAPIView):
     def post(self,request):
         serializer = self.serializer_class(data=request.data, context={"request":request})
 
-        if serializer.is_valid():
-            serializer.save()
-            
-            action = "LOGOUT"
-            message = f"{request.user.username} logged out."
-            create_audit_log(user=request.user,action=action,instance=request.user,message=message)
+        try:
+            if serializer.is_valid(raise_exception=True):
+                serializer.save()
+                
+                action = "LOGOUT"
+                message = f"{request.user.username} logged out."
+                create_audit_log(user=request.user,action=action,instance=request.user,message=message)
 
-            return Response({"detail":"User logged out susccessfuly."},status=status.HTTP_204_NO_CONTENT)
+                return success_response(message = "User logout successful.",
+                                        status_code = status.HTTP_204_NO_CONTENT
+                                       )
+
+        except drf_serializers.ValidationError as e:
+            message,data = normalize_validation_errors(e.detail)
+
+            return error_response(message = message,
+                                  data    = data,
+                                  status_code = status.HTTP_400_BAD_REQUEST
+                                 )
         
-        return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
 
 
 
@@ -99,17 +136,27 @@ class RefreshTokenAPIView(GenericAPIView):
     def post(self, request):
         serializer = self.serializer_class(data=request.data)
 
-        if serializer.is_valid():
-            refresh = serializer.validated_data["refresh"]
-            access  = serializer.validated_data["access"]
+        try:
+            if serializer.is_valid(raise_exception=True):
+                refresh = serializer.validated_data["refresh"]
+                access  = serializer.validated_data["access"]
 
-            return Response({"refresh":str(refresh),
-                             "access":str(access)
-                            },status=status.HTTP_200_OK
-                           )
+                return success_response(message = "Token refresh successful",
+                                        data    = {"refresh":str(refresh),
+                                                   "access":str(access)
+                                                  },
+                                        status_code = status.HTTP_200_OK
+                                       )
+
+
+        except drf_serializers.ValidationError as e:
+            message,data =  normalize_validation_errors(e.detail)
+
+            return error_response(message = message,
+                                  data    = data,
+                                  status_code =  status.HTTP_400_BAD_REQUEST
+                                 )
         
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
 
 
 class ProfileApiView(GenericAPIView):
@@ -125,17 +172,33 @@ class ProfileApiView(GenericAPIView):
     def get(self,request):
         serializer = self.get_serializer(request.user)
 
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return success_response(message = "User data fetched successfully",
+                                data    = serializer.data,
+                                status_code = status.HTTP_200_OK
+                               )
+    
     
     @swagger_auto_schema(tags=['User'])
     def patch(self,request):
         serializer = self.get_serializer(request.user, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+
+        try:
+            if serializer.is_valid(raise_exception=True):
+                serializer.save()
+                return success_response(message = "User data updation successful.",
+                                        data    = serializer.data,
+                                        status_code = status.HTTP_200_OK
+                                       )
+
+        except drf_serializers.ValidationError as e:
+            message,data = normalize_validation_errors(e.detail)
+
+            return error_response(message = message,
+                                  data    = data,
+                                  status_code = status.HTTP_400_BAD_REQUEST
+                                 )
+            
+           
 
 
 class UpdatePasswordAPIView(GenericAPIView):
@@ -146,11 +209,22 @@ class UpdatePasswordAPIView(GenericAPIView):
     def patch(self,request):
         serializer = self.serializer_class(request.user, data=request.data, context={"request":request})
 
-        if serializer.is_valid():
-            serializer.save()
-            return Response({"detail":"Password changed successfully."},status=status.HTTP_200_OK)
+        try:
+            if serializer.is_valid(raise_exception = True):
+                serializer.save()
+
+                return success_response(message = "Password updated successfully.",
+                                        status_code = status.HTTP_200_OK
+                                       )
         
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except drf_serializers.ValidationError as e:
+            message,data = normalize_validation_errors(e.detail)
+
+            return error_response(message = message,
+                                  data    = data,
+                                  status_code = status.HTTP_400_BAD_REQUEST
+                                 )
+
 
 
 class AddressApiView(GenericAPIView):
@@ -166,12 +240,24 @@ class AddressApiView(GenericAPIView):
     def post(self,request):
         serializer = self.get_serializer(data=request.data, context={"request":request})
 
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        try:
+            if serializer.is_valid(raise_exception=True):
+                serializer.save()
+
+                return success_response(message = "Address created successfuly.",
+                                        data    = serializer.data,
+                                        status_code = status.HTTP_201_CREATED
+                                       )
+            
+        except drf_serializers.ValidationError as e:
+            message,data = normalize_validation_errors(e.detail)
+
+            return error_response(message = message,
+                                  data    = data,
+                                  status_code = status.HTTP_400_BAD_REQUEST
+                                 )
         
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+
     @swagger_auto_schema(tags=["User"])
     def get(self,request):
         user_addresses = models.AddressModel.objects.filter(user=request.user).order_by('-created_at')
@@ -200,10 +286,18 @@ class AddressDetailAPIView(GenericAPIView):
         try:
             address = models.AddressModel.objects.get(id=id,user=request.user)
         except models.AddressModel.DoesNotExist:
-            return Response({"detail":"Invalid address id."}, status=status.HTTP_404_NOT_FOUND)
+            return error_response(message = "Invalid address id.",
+                                  data    = {"address_id":id},
+                                  status_code = status.HTTP_404_NOT_FOUND
+                                 )
+        
         
         address.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return success_response(message = "Address deleted successfuly.",
+                                data    = {"address_id":id},
+                                status_code = status.HTTP_204_NO_CONTENT
+                               )
+    
     
 
     @swagger_auto_schema(tags=["User"])
@@ -211,16 +305,29 @@ class AddressDetailAPIView(GenericAPIView):
         try:
             address = models.AddressModel.objects.get(id=id,user=request.user)
         except models.AddressModel.DoesNotExist:
-            return Response({"detail":"Invalid address id."},status=status.HTTP_404_NOT_FOUND)
+            return error_response(message = "Invalid address id.",
+                                  data    = {"address_id":id},
+                                  status_code = status.HTTP_404_NOT_FOUND
+                                 )
         
 
         serializer = self.get_serializer(address, data=request.data, partial=True)
 
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            if serializer.is_valid(raise_exception=True):
+                serializer.save()
+                return success_response(message = "Address updated successfuly.",
+                                        data    = serializer.data,
+                                        status_code = status.HTTP_200_OK
+                                    )
+            
+        except drf_serializers.ValidationError as e:
+            message,data = normalize_validation_errors(e.detail)
+
+            return error_response(message = message,
+                                  data    = data,
+                                  status_code = status.HTTP_400_BAD_REQUEST
+                                 )
     
 
     @swagger_auto_schema(tags=["User"])
@@ -228,12 +335,17 @@ class AddressDetailAPIView(GenericAPIView):
         try:
             address = models.AddressModel.objects.get(id=id,user=request.user)
         except models.AddressModel.DoesNotExist:
-            return Response({"detail":"Invalid address id."},status=status.HTTP_404_NOT_FOUND)
+            return error_response(message = "Invalid address id.",
+                                  data    = {"address_id":id},
+                                  status_code = status.HTTP_404_NOT_FOUND
+                                 )
         
         serializer = self.get_serializer(address)
 
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
+        return success_response(message = "Address info fetched successfuly.",
+                                data    = serializer.data,
+                                status_code = status.HTTP_200_OK
+                               )
 
     
 
@@ -253,7 +365,12 @@ class UserListAPIView(GenericAPIView):
         try:
             users = admin_filter_users(request,users)
         except drf_serializers.ValidationError as e:
-            return Response({"detail":e.detail}, status=status.HTTP_400_BAD_REQUEST)
+            message,data = normalize_validation_errors(e.detail)
+
+            return error_response(message = message,
+                                  data    = data,
+                                  status_code = status.HTTP_400_BAD_REQUEST
+                                 )
 
 
         paginator = self.pagination_class()
@@ -278,14 +395,18 @@ class UserDetailAPIView(GenericAPIView):
         try:
             user = self.get_queryset().get(id=id)
         except models.User.DoesNotExist:
-            return Response({"detail":"Invalid User id."},status=status.HTTP_404_NOT_FOUND)
+            return error_response(message = "Invalid user id.",
+                                  data    = {"user_id":id},
+                                  status_code = status.HTTP_404_NOT_FOUND
+                                 )
         
         serializer = self.serializer_class(user)
 
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
-
-
+        return success_response(message = "User data fetched successfuly.",
+                                data    = serializer.data,
+                                status_code = status.HTTP_200_OK
+                               )
+    
 
 
 class AuditLogListAPIView(GenericAPIView):
@@ -303,7 +424,13 @@ class AuditLogListAPIView(GenericAPIView):
         try:
             logs = admin_filter_logs(request,logs)
         except drf_serializers.ValidationError as e:
-            return Response({"detail":e.detail},status=status.HTTP_400_BAD_REQUEST)
+            message,data = normalize_validation_errors(e.detail)
+
+            return error_response(message = message,
+                                  data    = data,
+                                  status_code = status.HTTP_400_BAD_REQUEST
+                                 )
+
 
         paginator = self.pagination_class()
         page =paginator.paginate_queryset(logs,request)
@@ -324,11 +451,17 @@ class AdminAuditLogDetailAPIView(GenericAPIView):
         try:
             audit_log = self.get_queryset().get(id=id)
         except models.AuditLog.DoesNotExist:
-            return Response({"detail":"Invalid audit log id."},status=status.HTTP_404_NOT_FOUND)
+            return error_response(message = "Invalid audit log id.",
+                                  data    = {"log_id":id},
+                                  status_code = status.HTTP_404_NOT_FOUND
+                                 )
         
         serializer = self.serializer_class(audit_log)
 
-        return Response(serializer.data,status=status.HTTP_200_OK)
+        return success_response(message = "Audit log detail fetched successfuly.",
+                                data    =  serializer.data,
+                                status_code = status.HTTP_200_OK
+                               )
         
 
         

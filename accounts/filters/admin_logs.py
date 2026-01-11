@@ -29,7 +29,9 @@ def admin_filter_logs(request,queryset):
         try:
             user_id = int(user_id)
         except ValueError:
-            raise drf_serializers.ValidationError({"user_id":"Invalid user id."})
+            raise drf_serializers.ValidationError({"error_message":"Invalid user id.",
+                                                   "data":{"user_id":user_id}
+                                                 })
 
         queryset = queryset.filter(user_id=user_id)
 
@@ -63,18 +65,26 @@ def admin_filter_logs(request,queryset):
         try:
             date_from = date_field.run_validation(date_from)
         except drf_serializers.ValidationError:
-            raise drf_serializers.ValidationError({"date_from":"Invalid date format. Use YYYY-MM-DD."})
+            raise drf_serializers.ValidationError({"error_message":"Invalid date format. Use YYYY-MM-DD.",
+                                                   "data":{"date_from":date_from}
+                                                 })
 
 
     if date_to:
         try:
             date_to = date_field.run_validation(date_to)
         except drf_serializers.ValidationError:
-            raise drf_serializers.ValidationError({"date_to":"Invalid date format. Use YYYY-MM-DD."})   
+            raise drf_serializers.ValidationError({"error_message":"Invalid date format. Use YYYY-MM-DD.",
+                                                   "data":{"date_to":date_to}
+                                                 })   
 
 
     if date_from and date_to and date_from > date_to:
-        raise drf_serializers.ValidationError({"date_range":"date_from cannot be greater than date_to."})   
+        raise drf_serializers.ValidationError({"error_message":"date_from cannot be greater than date_to.",
+                                               "data":{"date_from":date_from,
+                                                       "date_to":date_to
+                                                      }
+                                             })   
     
 
 

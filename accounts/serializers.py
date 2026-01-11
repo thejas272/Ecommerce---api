@@ -68,7 +68,11 @@ class RegsiterSerializer(serializers.ModelSerializer):
                 return user
         
         except IntegrityError:
-            raise serializers.ValidationError({"detail":"Username or email already taken."})
+            raise serializers.ValidationError({"error_message":"Username or email already taken.",
+                                               "data":{"username":validated_data["username"],
+                                                       "email":validated_data["email"]
+                                                      }
+                                              })
         
 
 
@@ -85,10 +89,16 @@ class LoginSerializer(serializers.Serializer):
         user = authenticate(username=username, password=password)
 
         if not user:
-            raise serializers.ValidationError("Invalid credentials.")
+            raise serializers.ValidationError({"error_message":"Invalid credentials.",
+                                               "data":{"username":username,
+                                                       "password":password
+                                                      }
+                                             })
         
         if not user.is_active:
-            raise serializers.ValidationError("User account is not active.")
+            raise serializers.ValidationError({"error_message":"User account is not active.",
+                                               "data":{"username":username}
+                                             })
         
         attrs["user"] = user
         
@@ -104,21 +114,21 @@ class LogoutSerializer(serializers.Serializer):
 
         request = self.context.get("request")
         if not request or not request.user:
-            raise serializers.ValidationError("Authentication is needed for this operation.")
+            raise serializers.ValidationError({"error_message":"Authentication is needed for this operation."})
 
 
         try:
             refresh_token = RefreshToken(token)
         except TokenError:
-            raise serializers.ValidationError("Invalid or expired refresh token.")
+            raise serializers.ValidationError({"error_message":"Invalid or expired refresh token."})
 
 
         if refresh_token.token_type != "refresh":
-            raise serializers.ValidationError("Invalid token type.")
+            raise serializers.ValidationError({"error_message":"Invalid token type."})
 
 
         if int(refresh_token.get("user_id")) != request.user.id:
-            raise serializers.ValidationError("Refresh token doesn't belong to this user.") 
+            raise serializers.ValidationError({"error_message":"Refresh token doesn't belong to this user."}) 
         
         
         attrs['refresh_token'] = refresh_token 
@@ -144,7 +154,7 @@ class CustomRefreshTokenSerializer(serializers.Serializer):
         try:
             jwt_serializer.is_valid(raise_exception=True)
         except TokenError:
-            raise serializers.ValidationError("Invalid or expired refresh token.")
+            raise serializers.ValidationError({"error_message":"Invalid or expired refresh token."})
 
         jwt_data = jwt_serializer.validated_data
 
@@ -156,10 +166,10 @@ class CustomRefreshTokenSerializer(serializers.Serializer):
         try:
             user_instance = models.User.objects.get(id=user_id)
         except models.User.DoesNotExist:
-            raise serializers.ValidationError("User does not exist.")
+            raise serializers.ValidationError({"error_message":"User does not exist."})
 
         if not user_instance.is_active:      
-            raise serializers.ValidationError("User account is not active.") 
+            raise serializers.ValidationError({"error_message":"User account is not active."}) 
         
 
 
@@ -167,7 +177,7 @@ class CustomRefreshTokenSerializer(serializers.Serializer):
         attrs["refresh"] = jwt_data.get("refresh")
 
         if attrs["refresh"] is None:
-            raise serializers.ValidationError("Refresh token disabled.")
+            raise serializers.ValidationError({"error_message":"Refresh token disabled."})
         
         return attrs
     
@@ -226,7 +236,11 @@ class UpdateProfileSerializer(serializers.ModelSerializer):
             with transaction.atomic():
                 return super().update(instance, validated_data)
         except IntegrityError:
-            raise serializers.ValidationError({"detail":"Username or email already taken."})
+            raise serializers.ValidationError({"error_message":"Username or email already taken.",
+                                               "data":{"username":validated_data.get("username", ""),
+                                                       "email":validated_data.get("email", "")
+                                                      }
+                                             })
         
 
 
@@ -243,23 +257,23 @@ class UpdatePasswordSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         request = self.context.get('request')
         if not request or not request.user:
-            raise serializers.ValidationError("Authentication required for this operation.")
+            raise serializers.ValidationError({"error_message":"Authentication required for this operation."})
         
 
         user = request.user
 
         if not user.check_password(attrs["old_password"]):
-            raise serializers.ValidationError({"old_password":"Current password is incorrect."})
+            raise serializers.ValidationError({"error_message":"Current password is incorrect."})
 
         if attrs["new_password"] != attrs["confirm_password"]:
-            raise serializers.ValidationError({"confirm_password":"Passwords do not match."})
+            raise serializers.ValidationError({"error_message":"Passwords do not match."})
 
         return attrs
     
     def save(self, **kwargs):
         request = self.context.get("request")
         if not request or not request.user:
-            raise serializers.ValidationError("Authentication required for this operation.")
+            raise serializers.ValidationError({"error_message":"Authentication required for this operation."})
 
 
         user = request.user
@@ -300,7 +314,7 @@ class AddressCreateSerializer(serializers.ModelSerializer):
         request = self.context.get("request")
 
         if not request or not request.user:
-            raise serializers.ValidationError("Authentication required for this operation.")
+            raise serializers.ValidationError({"error_message":"Authentication required for this operation."})
         
         validated_data['user'] = request.user
 
@@ -317,7 +331,7 @@ class AddressCreateSerializer(serializers.ModelSerializer):
 
                 return super().create(validated_data)
         except IntegrityError:
-            raise serializers.ValidationError("Only one default address is allowed.")
+            raise serializers.ValidationError({"error_message":"Only one default address is allowed."})
 
 
 
@@ -356,7 +370,7 @@ class AddressUpdateSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
 
         if not request or not request.user:
-            raise serializers.ValidationError("Authentication required for this operation.")
+            raise serializers.ValidationError({"error_message":"Authentication required for this operation."})
         
         try:
             is_default = validated_data.get('is_default')
@@ -367,7 +381,7 @@ class AddressUpdateSerializer(serializers.ModelSerializer):
 
                 return super().update(instance, validated_data)
         except IntegrityError:
-            raise serializers.ValidationError("Only one default address is valid.")
+            raise serializers.ValidationError({"error_message":"Only one default address is allowed."})
     
 
 

@@ -33,8 +33,9 @@ def normalize_validation_errors(detail):
 
     # to catch and normalize exceptions raised delibarately. includes view, validate, create, update based exceptions.
     if isinstance(detail,dict) and "error_message" in detail:
+
         error_message = detail.get("error_message")
-        data    = detail.get("data") if detail.get("data") else {} 
+        data          = detail.get("data") if detail.get("data") else {} 
 
         if isinstance(error_message,list):     # to handle non field errors
             error_message = error_message[0]     
