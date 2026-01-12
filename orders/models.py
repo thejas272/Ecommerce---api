@@ -8,8 +8,16 @@ import uuid
 
 class OrderModel(models.Model):
 
+    ORDER_STATUS_FLOW = {"PENDING"  : ["PAID","CONFIRMED","CANCELLED"],
+                         "PAID"     : ["CONFIRMED","CANCELLED"],
+                         "CONFIRMED": ["SHIPPED","CANCELLED"],
+                         "SHIPPED"  : ["DELIVERED"],
+                         "DELIVERED": ["RETURNED"],
+                        }
+    
     STATUS_CHOICES =[("PENDING","Pending"),
                      ("PAID","Paid"),
+                     ("CONFIRMED","Confirmed"),
                      ("SHIPPED","Shipped"),
                      ("DELIVERED","Delivered",),
                      ("RETURNED","Returned"),

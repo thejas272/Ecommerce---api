@@ -7,6 +7,8 @@ from rest_framework_simplejwt.tokens import AccessToken,RefreshToken,TokenError
 import re
 from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, BlacklistedToken
 from django.conf import settings
+from orders import models as orders_models
+from accounts.helpers import create_audit_log
 
 class RegsiterSerializer(serializers.ModelSerializer):
     first_name = serializers.CharField(required=True, max_length=30)
@@ -410,7 +412,7 @@ class AdminUserDetailSerializer(serializers.ModelSerializer):
         fields = ["id","username","email","first_name","last_name","is_staff","is_superuser","last_login","is_active","date_joined"]
 
 
-
+# ---------------------Audit Log --------------------------------
 
 
 
@@ -434,3 +436,90 @@ class AdminAuditLogDetailSerializer(serializers.ModelSerializer):
         model = models.AuditLog
         fields = ["id","action","message","changes","user","model","object_id","created_at"]
 
+
+
+
+# -------------------------Order Management ------------------------------
+
+class AdminOrderListSerializer(serializers.ModelSerializer):
+    user_email = serializers.EmailField(source="user.email", read_only=True)
+
+    class Meta:
+        model = orders_models.OrderModel
+        fields = ["id","user_email","order_id","status","grand_total","created_at"]
+
+
+
+
+
+class AdminOrderItemListSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = orders_models.OrderItemModel
+        fields = ["id","product","product_name","brand_name","category_name","product_slug","brand_slug","category_slug","unit_price","quantity","total_price","created_at","updated_at"]
+
+
+class AdminOrderDetailSerializer(serializers.ModelSerializer):
+    user        = AdminUserNestedSerializer(read_only=True)
+    order_items = AdminOrderItemListSerializer(source="items",read_only=True, many=True)
+
+    class Meta:
+        model = orders_models.OrderModel
+        fields = ["id","user","order_items","name","phone","address_line","city","state","pincode","subtotal","shipping_fee","grand_total","status","order_id","created_at","updated_at"]
+
+
+
+
+class AdminOrderUpdateSerializer(serializers.ModelSerializer):
+    status = serializers.ChoiceField(required=True, choices=orders_models.OrderModel.STATUS_CHOICES)
+
+    class Meta:
+        model = orders_models.OrderModel
+        fields = ["status"]
+
+    def validate(self, attrs):               
+        status = attrs["status"]
+
+        current_status = self.instance.status
+
+        order_status_flow = orders_models.OrderModel.ORDER_STATUS_FLOW
+
+        if status == current_status:
+            raise serializers.ValidationError({"error_message":"Order is already in this status.",
+                                               "data":{"current_status":current_status,
+                                                       "new_status":status
+                                                      }
+                                             })
+        
+        allowed_next_stages = order_status_flow.get(current_status,[])
+
+        if status not in allowed_next_stages:
+            raise serializers.ValidationError({"error_message":"Invalid status update request, please check and try again.",
+                                               "data":{"current_status":current_status,
+                                                       "new_status":status,
+                                                       "allowed_next":allowed_next_stages
+                                                      }
+                                             })
+
+        return attrs
+    
+
+    def update(self, instance, validated_data):
+    
+        request = self.context.get("request")
+        if not request or not request.user:
+            raise serializers.ValidationError({"error_message":"Authentication required for this operation."}) 
+
+        action = "ORDER_STATUS_UPDATE"
+        message = f"Order status of {instance.order_id} changed from {instance.status} -> {validated_data['status']} by {request.user.username}"
+        changes = {"status":{"old":str(instance.status),
+                             "new":str(validated_data["status"])
+                            }
+                  }
+
+        
+        with transaction.atomic():
+            order = super().update(instance, validated_data)
+            create_audit_log(user=request.user,action=action,message=message,instance=order,changes=changes)
+
+            return order

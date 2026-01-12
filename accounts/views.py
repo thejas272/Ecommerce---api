@@ -17,6 +17,7 @@ from rest_framework import serializers as drf_serializers
 from rest_framework.permissions import IsAdminUser
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 from common.helpers import success_response,error_response,normalize_validation_errors
+from orders import models as orders_models
 
 # Create your views here.
 
@@ -464,6 +465,84 @@ class AdminAuditLogDetailAPIView(GenericAPIView):
                                )
         
 
+
+class AdminOrderListAPIView(GenericAPIView):
+    permission_classes = [IsAuthenticated,DjangoModelPermissions,IsAdminUser]
+    queryset = orders_models.OrderModel.objects.all()
+    serializer_class = serializers.AdminOrderListSerializer
+    pagination_class = DefaultPagination
+
+    @swagger_auto_schema(tags=["Admin"])
+    def get(self,request):
+        orders = self.queryset.order_by('-created_at')
+
+        paginator = self.pagination_class()
+        page = paginator.paginate_queryset(orders,request)
+
+        serializer = self.serializer_class(page, many=True)
+
+        return paginator.get_paginated_response(serializer.data)
+    
+
+
+class AdminOrderDetailAPIView(GenericAPIView):
+    permission_classes = [IsAuthenticated,DjangoModelPermissions,IsAdminUser]
+    queryset = orders_models.OrderModel.objects.all()
+    lookup_field = "order_id"
+
+    def get_serializer_class(self):
+        if self.request.method == "PATCH":
+            return serializers.AdminOrderUpdateSerializer
+        return serializers.AdminOrderDetailSerializer
+
+    @swagger_auto_schema(tags=["Admin"])
+    def get(self,request,id):
+        try:
+            order_instance = self.queryset.prefetch_related("items").select_related("user").get(order_id=id)
+        except orders_models.OrderModel.DoesNotExist:
+            return error_response(message = "Invalid order id.",
+                                  data    = {"order_id":id},
+                                  status_code = status.HTTP_404_NOT_FOUND
+                                 )
         
+        serializer = self.get_serializer(order_instance)
+
+        return success_response(message = "Order details fetched successfuly.",
+                                data    = serializer.data,
+                                status_code = status.HTTP_200_OK
+                               )
+    
+
+    @swagger_auto_schema(tags=["Admin"])
+    def patch(self,request,id):
+        try:
+            order_instance = self.queryset.get(order_id=id)
+        except orders_models.OrderModel.DoesNotExist:
+            return error_response(message = "Invalid order id.",
+                                  data    = {"order_id":id},
+                                  status_code = status.HTTP_404_NOT_FOUND
+                                 )
+        
+        serializer = self.get_serializer(order_instance, data=request.data, context={"request":request})
+        try:
+            if serializer.is_valid(raise_exception=True):
+                serializer.save()
+
+                return success_response(message = "Order status change successful.",
+                                        data    = serializer.data,
+                                        status_code = status.HTTP_200_OK
+                                    )
+        
+        except drf_serializers.ValidationError as e:
+            message,data = normalize_validation_errors(e.detail)
+
+            return error_response(message = message,
+                                  data    = data,
+                                  status_code = status.HTTP_400_BAD_REQUEST
+                                 )
+
+    
+        
+
 
     
