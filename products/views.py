@@ -21,6 +21,7 @@ from products.filters.user_products import user_products_list
 from rest_framework import serializers as drf_serializers
 from rest_framework.permissions import IsAdminUser
 from common.helpers import success_response,error_response,normalize_validation_errors
+from common.schemas import SuccessResponseSerializer,ErrorResponseSerializer,CategoryCreateSucccessResponseSerializer,AdminCategoryListSuccessResponseSerializer,CategoryListSuccessResponseSerializer,CategoryDetailSuccessResponseSerializer,CategoryUpdateSuccessResponseSerializer,CategoryDeletSuccessResponseSerializer,AdminCategoryDetailSuccessResponseSerializer,BrandCreateSuccessResponseSerializer,AdminBrandListSuccessResponseSerializer,BrandListSuccessResponseSerializer,BrandDetailSuccessResponseSerializer,BrandUpdateSuccessResponseSerializer,BrandDeleteSuccessResponseSerializer,AdminBrandDetailSuccessSerializer,ProductCreateSuccessResponseSerializer,AdminProductListSuccessResponseSerializer,ProductListSuccessResponseSerializer,ProductDetailSuccessResponseSerializer,ProductUpdateSuccessResponseSerializer,ProductDeleteSuccessResponseSerializer,AdminProductDetailSuccessResponseSerializer
 
 # Create your views here.
 
@@ -39,7 +40,12 @@ class AdminCategoryAPIView(GenericAPIView):
         return serializers.AdminCategoryListSerializer
 
 
-    @swagger_auto_schema(tags=["Admin - Categories"])
+    @swagger_auto_schema(tags=["Admin - Categories"], request_body = serializers.CategoryCreateSerializer,
+                         responses = {201 : CategoryCreateSucccessResponseSerializer,
+                                      500 : ErrorResponseSerializer,
+                                      400 : ErrorResponseSerializer
+                                     }
+                        )
     def post(self,request):
         serializer = self.get_serializer(data=request.data, context={"request":request})
         
@@ -61,7 +67,11 @@ class AdminCategoryAPIView(GenericAPIView):
 
 
     @swagger_auto_schema(tags=["Admin - Categories"],
-                         manual_parameters=[IS_ACTIVE_PARAM,PARENT_PARAM,CATEGORY_PARAM,SEARCH_PARAM]
+                         manual_parameters=[IS_ACTIVE_PARAM,PARENT_PARAM,CATEGORY_PARAM,SEARCH_PARAM],
+                         request_body = None,
+                         responses = {200 : AdminCategoryListSuccessResponseSerializer,
+                                      500 : ErrorResponseSerializer
+                                     }
                          )    
     def get(self,request):
         categories = self.get_queryset().order_by('-created_at')
@@ -73,7 +83,17 @@ class AdminCategoryAPIView(GenericAPIView):
 
         serializer = self.get_serializer(page, many=True)
 
-        return paginator.get_paginated_response(serializer.data)
+        paginated_data = {"count":paginator.page.paginator.count,
+                          "next":paginator.get_next_link(),
+                          "previous":paginator.get_previous_link(),
+                          "results":serializer.data
+                         }
+
+        return success_response(message = "Category list fetched successfuly",
+                                data    = paginated_data,
+                                status_code = status.HTTP_200_OK
+                               )
+    
 
 
 
@@ -82,7 +102,12 @@ class CategoryListAPIView(GenericAPIView):
     serializer_class = serializers.CategorySerializer
     pagination_class = DefaultPagination
 
-    @swagger_auto_schema(tags=['Categories'])
+    @swagger_auto_schema(tags=['Categories'], request_body=None, 
+                         responses = {200 : CategoryListSuccessResponseSerializer,
+                                      500 : ErrorResponseSerializer,
+                                      400 : ErrorResponseSerializer
+                                     }
+                        )
     def get(self,request):
         categories = models.CategoryModel.objects.filter(is_active=True).select_related("parent").order_by('-created_at')
 
@@ -91,7 +116,16 @@ class CategoryListAPIView(GenericAPIView):
         
         serializer = self.serializer_class(page, many=True)
 
-        return paginator.get_paginated_response(serializer.data)
+        paginated_data = {"count":paginator.page.paginator.count,
+                          "next":paginator.get_next_link(),
+                          "previous":paginator.get_previous_link(),
+                          "results":serializer.data
+                         }
+        
+        return success_response(message = "Category list fetched successfuly.",
+                                data    = paginated_data,
+                                status_code = status.HTTP_200_OK
+                               )
     
 
 
@@ -101,7 +135,11 @@ class CategoryDetailAPIView(GenericAPIView):
     serializer_class = serializers.CategorySerializer
     lookup_field = "slug"
 
-    @swagger_auto_schema(tags=['Categories'])
+    @swagger_auto_schema(tags=['Categories'],request_body=None, responses={200 : CategoryDetailSuccessResponseSerializer,
+                                                                           404 : ErrorResponseSerializer,
+                                                                           500 : ErrorResponseSerializer
+                                                                          }
+                        )
     def get(self,request,slug):
         try:
             category = models.CategoryModel.objects.get(slug=slug, is_active=True)
@@ -130,7 +168,13 @@ class AdminCategoryDetailAPIView(GenericAPIView):
         return serializers.AdminCategoryDetailSerializer
         
 
-    @swagger_auto_schema(tags=["Admin - Categories"])
+    @swagger_auto_schema(tags=["Admin - Categories"], request_body=None,
+                         responses = {200 : CategoryUpdateSuccessResponseSerializer,
+                                      400 : ErrorResponseSerializer,
+                                      500 : ErrorResponseSerializer,
+                                      404 : ErrorResponseSerializer
+                                     }
+                        )
     def patch(self,request,id):
         try:
             category = models.CategoryModel.objects.get(id=id)
@@ -160,7 +204,12 @@ class AdminCategoryDetailAPIView(GenericAPIView):
         
 
 
-    @swagger_auto_schema(tags=["Admin - Categories"])
+    @swagger_auto_schema(tags=["Admin - Categories"],request_body=None,
+                         responses = {200 : CategoryDeletSuccessResponseSerializer,
+                                      404 : ErrorResponseSerializer,
+                                      500 : ErrorResponseSerializer
+                                     }
+                        )
     def delete(self,request,id):
         try:
             category = models.CategoryModel.objects.get(id=id, is_active=True)
@@ -189,7 +238,12 @@ class AdminCategoryDetailAPIView(GenericAPIView):
       
     
 
-    @swagger_auto_schema(tags=["Admin - Categories"])
+    @swagger_auto_schema(tags=["Admin - Categories"], request_body=None,
+                         responses = {200 : AdminCategoryDetailSuccessResponseSerializer,
+                                      500 : ErrorResponseSerializer,
+                                      404 : ErrorResponseSerializer
+                                     }
+                        )
     def get(self,request,id):
         try:
             category = models.CategoryModel.objects.get(id=id)
@@ -220,7 +274,12 @@ class AdminBrandAPIView(GenericAPIView):
             return serializers.BrandCreateSerializer
         return serializers.AdminBrandSerializer
 
-    @swagger_auto_schema(tags=['Admin - Brands'])
+    @swagger_auto_schema(tags=['Admin - Brands'], request_body = serializers.BrandCreateSerializer,
+                         responses = {201 : BrandCreateSuccessResponseSerializer,
+                                      500 : ErrorResponseSerializer,
+                                      400 : ErrorResponseSerializer
+                                     }
+                        )
     def post(self,request):
         serializer = self.get_serializer(data=request.data, context={"request":request})
         
@@ -242,7 +301,13 @@ class AdminBrandAPIView(GenericAPIView):
         
     
     @swagger_auto_schema(tags=["Admin - Brands"],
-                         manual_parameters=[IS_ACTIVE_PARAM,BRAND_PARAM,SEARCH_PARAM])
+                         manual_parameters=[IS_ACTIVE_PARAM,BRAND_PARAM,SEARCH_PARAM],
+                         request_body=None,
+                         responses = {200 : AdminBrandListSuccessResponseSerializer,
+                                      400 : ErrorResponseSerializer,
+                                      500 : ErrorResponseSerializer
+                                     }
+                        )
     def get(self,request):
         brands = self.get_queryset().order_by('-created_at')
 
@@ -254,7 +319,17 @@ class AdminBrandAPIView(GenericAPIView):
 
         serializer = self.get_serializer(page, many=True)
 
-        return paginator.get_paginated_response(serializer.data)
+        paginated_data = {"count":paginator.page.paginator.count,
+                          "next":paginator.get_next_link(),
+                          "previous":paginator.get_previous_link(),
+                          "results":serializer.data
+                         }
+        
+        return success_response(message = "Brand list fetched successfuly.",
+                                data    = paginated_data,
+                                status_code = status.HTTP_200_OK
+                               )
+    
 
 
 
@@ -263,7 +338,11 @@ class BrandListAPIView(GenericAPIView):
     serializer_class = serializers.BrandSerializer
     pagination_class = DefaultPagination
 
-    @swagger_auto_schema(tags=["Brands"])
+    @swagger_auto_schema(tags=["Brands"], request_body=None, responses = {200 : BrandListSuccessResponseSerializer,
+                                                                          500 : ErrorResponseSerializer,
+                                                                          400 : ErrorResponseSerializer
+                                                                         }
+                        )
     def get(self,request):
         brands = models.BrandModel.objects.filter(is_active=True)
 
@@ -272,7 +351,17 @@ class BrandListAPIView(GenericAPIView):
 
         serializer = self.serializer_class(page, many=True)
 
-        return paginator.get_paginated_response(serializer.data)
+        paginated_data = {"count":paginator.page.paginator.count,
+                          "next":paginator.get_next_link(),
+                          "previous":paginator.get_previous_link(),
+                          "results":serializer.data
+                         }
+        
+        return success_response(message = "Brand list fetched successfuly.",
+                                data = paginated_data,
+                                status_code = status.HTTP_200_OK
+                               )
+    
 
 
 
@@ -281,7 +370,11 @@ class BrandDetailAPIView(GenericAPIView):
     serializer_class = serializers.BrandSerializer
     lookup_field = "slug"
 
-    @swagger_auto_schema(tags=['Brands'])
+    @swagger_auto_schema(tags=['Brands'], request_body=None, responses = {200 : BrandDetailSuccessResponseSerializer,
+                                                                          404 : ErrorResponseSerializer,
+                                                                          500 : ErrorResponseSerializer
+                                                                         }
+                        )
     def get(self,request,slug):
         try:
             brand = models.BrandModel.objects.get(slug=slug, is_active=True)
@@ -311,7 +404,13 @@ class AdminBrandDetailAPIView(GenericAPIView):
         return serializers.AdminBrandSerializer
 
 
-    @swagger_auto_schema(tags=["Admin - Brands"])
+    @swagger_auto_schema(tags=["Admin - Brands"], request_body=serializers.BrandUpdateSerializer,
+                         responses = {200 : BrandUpdateSuccessResponseSerializer,
+                                      500 : ErrorResponseSerializer,
+                                      404 : ErrorResponseSerializer,
+                                      400 : ErrorResponseSerializer
+                                     }
+                        )
     def patch(self,request,id):
         try:
             brand = models.BrandModel.objects.get(id=id)
@@ -341,7 +440,12 @@ class AdminBrandDetailAPIView(GenericAPIView):
         
 
 
-    @swagger_auto_schema(tags=["Admin - Brands"])
+    @swagger_auto_schema(tags=["Admin - Brands"], request_body=None,
+                         responses = {200 : BrandDeleteSuccessResponseSerializer,
+                                      404 : ErrorResponseSerializer,
+                                      500 : ErrorResponseSerializer
+                                     }
+                        )
     def delete(self,request,id):
         try:
             brand = models.BrandModel.objects.get(id=id, is_active=True)
@@ -369,7 +473,11 @@ class AdminBrandDetailAPIView(GenericAPIView):
                                )
     
 
-    @swagger_auto_schema(tags=["Admin - Brands"])
+    @swagger_auto_schema(tags=["Admin - Brands"], request_body=None, responses = {200 : AdminBrandDetailSuccessSerializer,
+                                                                                  500 : ErrorResponseSerializer,
+                                                                                  404 : ErrorResponseSerializer
+                                                                                 }
+                        )
     def get(self,request,id):
         try:
             brand = models.BrandModel.objects.get(id=id)
@@ -405,7 +513,12 @@ class AdminProductAPIView(GenericAPIView):
             return serializers.ProductCreateSerializer
         return serializers.AdminProductListSerializer
 
-    @swagger_auto_schema(tags=["Admin - Products"])
+    @swagger_auto_schema(tags=["Admin - Products"], request_body=serializers.ProductCreateSerializer,
+                         responses = {201 : ProductCreateSuccessResponseSerializer,
+                                      500 : ErrorResponseSerializer,
+                                      400 : ErrorResponseSerializer
+                                     }
+                        )
     def post(self,request):
         serializer = self.get_serializer(data=request.data, context={"request":request})
 
@@ -427,7 +540,11 @@ class AdminProductAPIView(GenericAPIView):
         
     
     @swagger_auto_schema(tags=["Admin - Products"],
-                         manual_parameters=[CATEGORY_PARAM,BRAND_PARAM,SEARCH_PARAM,MIN_PRICE_PARAM,MAX_PRICE_PARAM,IS_ACTIVE_PARAM]
+                         manual_parameters=[CATEGORY_PARAM,BRAND_PARAM,SEARCH_PARAM,MIN_PRICE_PARAM,MAX_PRICE_PARAM,IS_ACTIVE_PARAM],
+                         responses = {200 : AdminProductListSuccessResponseSerializer,
+                                      400 : ErrorResponseSerializer,
+                                      500 : ErrorResponseSerializer
+                                     }
                          )
     def get(self,request):
         products = self.get_queryset().order_by('-created_at')
@@ -442,7 +559,16 @@ class AdminProductAPIView(GenericAPIView):
 
         serializer = self.get_serializer(page, many=True)
 
-        return paginator.get_paginated_response(serializer.data)
+        paginated_data = {"count":paginator.page.paginator.count,
+                          "next":paginator.get_next_link(),
+                          "previous":paginator.get_previous_link(),
+                          "results":serializer.data
+                         }
+        
+        return success_response(message = "Product list fetched successfuly.",
+                                data    = paginated_data,
+                                status_code = status.HTTP_200_OK
+                               )
     
 
 
@@ -452,7 +578,12 @@ class ProductListAPIView(GenericAPIView):
     pagination_class = DefaultPagination
 
     @swagger_auto_schema(tags=["Products"],
-                         manual_parameters=[CATEGORY_PARAM,BRAND_PARAM,MIN_PRICE_PARAM,MAX_PRICE_PARAM,SEARCH_PARAM,SORT_PARAM,IN_STOCK_PARAM]
+                         manual_parameters=[CATEGORY_PARAM,BRAND_PARAM,MIN_PRICE_PARAM,MAX_PRICE_PARAM,SEARCH_PARAM,SORT_PARAM,IN_STOCK_PARAM],
+                         request_body = None,
+                         responses = {200 : ProductListSuccessResponseSerializer,
+                                      500 : ErrorResponseSerializer,
+                                      400 : ErrorResponseSerializer
+                                     }
                          )
     def get(self,request):
         products = models.ProductModel.objects.filter(is_active=True).select_related('category','brand').order_by('-created_at')
@@ -468,7 +599,17 @@ class ProductListAPIView(GenericAPIView):
         
         serializer = self.serializer_class(page, many=True)
 
-        return paginator.get_paginated_response(serializer.data)
+        paginated_data = {"count":paginator.page.paginator.count,
+                          "next":paginator.get_next_link(),
+                          "previous":paginator.get_previous_link(),
+                          "results":serializer.data
+                         }
+        
+        return success_response(message = "Product list fetched successfuly.",
+                                data = paginated_data,
+                                status_code = status.HTTP_200_OK
+                               )
+
 
 
 
@@ -478,7 +619,12 @@ class ProductDetailAPIView(GenericAPIView):
     serializer_class = serializers.ProductSerializer
     lookup_field = "slug"
 
-    @swagger_auto_schema(tags=['Products'])
+    @swagger_auto_schema(tags=['Products'], request_body=None,
+                         responses = {200 : ProductDetailSuccessResponseSerializer,
+                                      500 : ErrorResponseSerializer,
+                                      404 : ErrorResponseSerializer
+                                     }
+                        )
     def get(self,request,slug):
         try:
             product = models.ProductModel.objects.get(slug=slug, is_active=True)
@@ -509,7 +655,13 @@ class AdminProductDetailAPIView(GenericAPIView):
         return serializers.AdminProductDetailSerializer
 
 
-    @swagger_auto_schema(tags=["Admin - Products"])
+    @swagger_auto_schema(tags=["Admin - Products"], request_body=serializers.ProductUpdateSerializer,
+                         responses = {200 : ProductUpdateSuccessResponseSerializer,
+                                      500 : ErrorResponseSerializer,
+                                      404 : ErrorResponseSerializer,
+                                      400 : ErrorResponseSerializer
+                                     }
+                        )
     def patch(self,request,id):
         try:
             product = models.ProductModel.objects.get(id=id)
@@ -538,7 +690,11 @@ class AdminProductDetailAPIView(GenericAPIView):
                                  )
 
 
-    @swagger_auto_schema(tags=["Admin - Products"])
+    @swagger_auto_schema(tags=["Admin - Products"], request_body=None, responses = {200 : ProductDeleteSuccessResponseSerializer,
+                                                                                    404 : ErrorResponseSerializer,
+                                                                                    500 : ErrorResponseSerializer
+                                                                                   }
+                        )
     def delete(self,request,id):
         try:
             product = models.ProductModel.objects.get(id=id,is_active=True)
@@ -568,7 +724,11 @@ class AdminProductDetailAPIView(GenericAPIView):
 
     
 
-    @swagger_auto_schema(tags=["Admin - Products"])
+    @swagger_auto_schema(tags=["Admin - Products"], request_body=None, responses = {200 : AdminProductDetailSuccessResponseSerializer,
+                                                                                    404 : ErrorResponseSerializer,
+                                                                                    500 : ErrorResponseSerializer
+                                                                                   }
+                        )
     def get(self,request,id):
         try:
             product = models.ProductModel.objects.get(id=id)
