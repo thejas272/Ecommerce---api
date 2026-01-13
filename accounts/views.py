@@ -18,7 +18,7 @@ from rest_framework.permissions import IsAdminUser
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 from common.helpers import success_response,error_response,normalize_validation_errors
 from orders import models as orders_models
-
+from common.schemas import RegisterSuccessResponseSerializer,LoginSuccessResponseSerializer,ErrorResponseSerializer,SuccessResponseSerializer,RefreshTokenSuccessSerializer,ProfileSuccessResponseSerializer,UpdateProfileSuccessResponseSerializer,CreateAddressSuccessResponse,AddressListSuccessResponseSerializer,AddressDeleteSuccessResponse,UpdateAddressSuccessResponseSerializer,AddressDetailSuccessResponse,UserListSuccessResponseSerializer, UserDetailSuccessResponseSerializer,AuditLogListSuccessResponseSerializer,AuditLogDetailSuccessResponseSerializer,OrderListSuccessResponseSerializer,OrderDetailSuccessResponseSerializer,OrderUpdateSuccessResponseSerializer
 # Create your views here.
 
 
@@ -27,7 +27,12 @@ class RegisterAPIView(GenericAPIView):
     permission_classes = [AllowAny]
     serializer_class = serializers.RegsiterSerializer
 
-    @swagger_auto_schema(tags=['Authentication'])
+    @swagger_auto_schema(tags=['Authentication'], request_body=serializers.RegsiterSerializer,
+                         responses={201 : RegisterSuccessResponseSerializer,
+                                    500 : ErrorResponseSerializer,
+                                    400 : ErrorResponseSerializer
+                                   }
+                        )
     def post(self,request):
 
         serializer = self.serializer_class(data=request.data)
@@ -56,7 +61,12 @@ class LoginAPIView(GenericAPIView):
     throttle_classes = [LoginRateThrottle]
     serializer_class = serializers.LoginSerializer
 
-    @swagger_auto_schema(tags=['Authentication'], request_body=serializers.LoginSerializer)
+    @swagger_auto_schema(tags=['Authentication'], request_body=serializers.LoginSerializer,
+                         responses={200 : LoginSuccessResponseSerializer,
+                                    500 : ErrorResponseSerializer,
+                                    400 : ErrorResponseSerializer
+                                   }
+                        )
     def post(self,request):
         serializer = self.serializer_class(data=request.data)
 
@@ -100,7 +110,12 @@ class LogoutAPIView(GenericAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = serializers.LogoutSerializer
 
-    @swagger_auto_schema(tags=['Authentication'])
+    @swagger_auto_schema(tags=['Authentication'],request_body=serializers.LogoutSerializer,
+                         responses={204 : SuccessResponseSerializer,
+                                    500 : ErrorResponseSerializer,
+                                    400 : ErrorResponseSerializer
+                                   }
+                        )
     def post(self,request):
         serializer = self.serializer_class(data=request.data, context={"request":request})
 
@@ -133,7 +148,11 @@ class RefreshTokenAPIView(GenericAPIView):
     serializer_class = serializers.CustomRefreshTokenSerializer
 
     @swagger_auto_schema(tags=['Authentication'], request_body=serializers.CustomRefreshTokenSerializer, 
-                         responses={200 : TokenRefreshSerializer})
+                         responses={200 : RefreshTokenSuccessSerializer,
+                                    500 : ErrorResponseSerializer,
+                                    400 : ErrorResponseSerializer
+                                   }
+                        )
     def post(self, request):
         serializer = self.serializer_class(data=request.data)
 
@@ -169,7 +188,10 @@ class ProfileApiView(GenericAPIView):
         return serializers.ProfileSerializer
         
 
-    @swagger_auto_schema(tags=['User'])
+    @swagger_auto_schema(tags=['User'], request_body=None, responses={200 : ProfileSuccessResponseSerializer,
+                                                                      500 : ErrorResponseSerializer
+                                                                     }
+                        )
     def get(self,request):
         serializer = self.get_serializer(request.user)
 
@@ -179,7 +201,12 @@ class ProfileApiView(GenericAPIView):
                                )
     
     
-    @swagger_auto_schema(tags=['User'])
+    @swagger_auto_schema(tags=['User'], request_body=serializers.UpdateProfileSerializer,
+                         responses={200:UpdateProfileSuccessResponseSerializer,
+                                    400:ErrorResponseSerializer,
+                                    500:ErrorResponseSerializer
+                                   }
+                        )
     def patch(self,request):
         serializer = self.get_serializer(request.user, data=request.data, partial=True)
 
@@ -206,7 +233,12 @@ class UpdatePasswordAPIView(GenericAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = serializers.UpdatePasswordSerializer
 
-    @swagger_auto_schema(tags=['User'])
+    @swagger_auto_schema(tags=['User'],request_body=serializers.UpdatePasswordSerializer,
+                         responses={200 : SuccessResponseSerializer,
+                                    400 : ErrorResponseSerializer,
+                                    500 : ErrorResponseSerializer
+                                   }
+                        )
     def patch(self,request):
         serializer = self.serializer_class(request.user, data=request.data, context={"request":request})
 
@@ -237,7 +269,12 @@ class AddressApiView(GenericAPIView):
             return serializers.AddressCreateSerializer
         return serializers.AddressSerializer
 
-    @swagger_auto_schema(tags=["User"])
+    @swagger_auto_schema(tags=["User"],request_body=serializers.AddressSerializer,
+                         responses={201 : CreateAddressSuccessResponse,
+                                    400 : ErrorResponseSerializer,
+                                    500 : ErrorResponseSerializer
+                                   }
+                        )
     def post(self,request):
         serializer = self.get_serializer(data=request.data, context={"request":request})
 
@@ -259,7 +296,12 @@ class AddressApiView(GenericAPIView):
                                  )
         
 
-    @swagger_auto_schema(tags=["User"])
+    @swagger_auto_schema(tags=["User"], request_body=None,
+                         responses={200 : AddressListSuccessResponseSerializer,
+                                    500 : ErrorResponseSerializer,
+                                    400 : ErrorResponseSerializer
+                                   }
+                        )
     def get(self,request):
         user_addresses = models.AddressModel.objects.filter(user=request.user).order_by('-created_at')
 
@@ -269,7 +311,16 @@ class AddressApiView(GenericAPIView):
 
         serializer = self.get_serializer(page, many=True)
 
-        return paginator.get_paginated_response(serializer.data)
+        paginated_data = {"count":paginator.page.paginator.count,
+                          "next":paginator.get_next_link(),
+                          "previous":paginator.get_previous_link(),
+                          "results":serializer.data
+                         }
+        
+        return success_response(message = "Address list fetched successfuly.",
+                                data    = paginated_data,
+                                status_code = status.HTTP_200_OK
+                               )
     
 
 
@@ -282,7 +333,11 @@ class AddressDetailAPIView(GenericAPIView):
             return serializers.AddressUpdateSerializer
         return serializers.AddressSerializer
 
-    @swagger_auto_schema(tags=["User"])
+    @swagger_auto_schema(tags=["User"], request_body=None, responses={404 : ErrorResponseSerializer,
+                                                                      500 : ErrorResponseSerializer,
+                                                                      204:AddressDeleteSuccessResponse
+                                                                     }
+                        )
     def delete(self,request,id):
         try:
             address = models.AddressModel.objects.get(id=id,user=request.user)
@@ -301,7 +356,13 @@ class AddressDetailAPIView(GenericAPIView):
     
     
 
-    @swagger_auto_schema(tags=["User"])
+    @swagger_auto_schema(tags=["User"], request_body=serializers.AddressUpdateSerializer,
+                         responses = {200 : UpdateAddressSuccessResponseSerializer,
+                                      500 : ErrorResponseSerializer,
+                                      404 : ErrorResponseSerializer,
+                                      400 : ErrorResponseSerializer
+                                     }
+                        )
     def patch(self,request,id):
         try:
             address = models.AddressModel.objects.get(id=id,user=request.user)
@@ -331,7 +392,12 @@ class AddressDetailAPIView(GenericAPIView):
                                  )
     
 
-    @swagger_auto_schema(tags=["User"])
+    @swagger_auto_schema(tags=["User"], request_body=None,
+                         responses = {200 : AddressDetailSuccessResponse,
+                                      500 : ErrorResponseSerializer,
+                                      404 : ErrorResponseSerializer
+                                     }
+                         )
     def get(self,request,id):
         try:
             address = models.AddressModel.objects.get(id=id,user=request.user)
@@ -358,7 +424,12 @@ class UserListAPIView(GenericAPIView):
     pagination_class = DefaultPagination
 
     @swagger_auto_schema(tags=['Admin'],
-                         manual_parameters=[ID_PARAM,SEARCH_PARAM,IS_STAFF_PARAM,IS_ACTIVE_PARAM,DATE_FROM_PARAM,DATE_TO_PARAM]
+                         manual_parameters=[ID_PARAM,SEARCH_PARAM,IS_STAFF_PARAM,IS_ACTIVE_PARAM,DATE_FROM_PARAM,DATE_TO_PARAM],
+                         request_body = None,
+                         responses = {200 : UserListSuccessResponseSerializer,
+                                      400 : ErrorResponseSerializer,
+                                      500 : ErrorResponseSerializer
+                                     }
                         )
     def get(self,request):
         users = self.get_queryset().order_by('-date_joined')
@@ -379,8 +450,16 @@ class UserListAPIView(GenericAPIView):
 
         serializer = self.serializer_class(page, many=True)
 
+        paginated_data = {"count":paginator.page.paginator.count,
+                          "next":paginator.get_next_link(),
+                          "previous":paginator.get_previous_link(),
+                          "results":serializer.data
+                         }
 
-        return paginator.get_paginated_response(serializer.data)
+        return success_response(message = "User list fetched successfuly.",
+                                data    = paginated_data,
+                                status_code = status.HTTP_200_OK
+                               )
     
 
 
@@ -391,7 +470,11 @@ class UserDetailAPIView(GenericAPIView):
     queryset = models.User.objects.all()
     lookup_field = "id"
 
-    @swagger_auto_schema(tags=["Admin"])
+    @swagger_auto_schema(tags=["Admin"], request_body=None, responses = {200 : UserDetailSuccessResponseSerializer,
+                                                                         404 : ErrorResponseSerializer,
+                                                                         500 : ErrorResponseSerializer
+                                                                        }
+                        )
     def get(self,request,id):
         try:
             user = self.get_queryset().get(id=id)
@@ -417,7 +500,12 @@ class AuditLogListAPIView(GenericAPIView):
     pagination_class = DefaultPagination
 
     @swagger_auto_schema(tags=['Admin'],
-                         manual_parameters=[ID_PARAM,U_ID_PARAM,ACTION_PARAM,DATE_FROM_PARAM,DATE_TO_PARAM,SEARCH_PARAM,MODEL_PARAM,OBJECT_ID_PARAM]
+                         manual_parameters=[ID_PARAM,U_ID_PARAM,ACTION_PARAM,DATE_FROM_PARAM,DATE_TO_PARAM,SEARCH_PARAM,MODEL_PARAM,OBJECT_ID_PARAM],
+                         request_body = None,
+                         responses = {200 : AuditLogListSuccessResponseSerializer,
+                                      500 : ErrorResponseSerializer,
+                                      400 : ErrorResponseSerializer
+                                     }
                         )
     def get(self,request):
         logs = self.get_queryset()
@@ -438,7 +526,16 @@ class AuditLogListAPIView(GenericAPIView):
 
         serializer = self.serializer_class(page, many=True)
 
-        return paginator.get_paginated_response(serializer.data)
+        paginated_data = {"count":paginator.page.paginator.count,
+                          "next":paginator.get_next_link(),
+                          "previous":paginator.get_previous_link(),
+                          "results":serializer.data
+                         }
+
+        return success_response(message = "Audit Log list fetched successfuly",
+                                data    = paginated_data,
+                                status_code = status.HTTP_200_OK
+                               )
     
 
 class AdminAuditLogDetailAPIView(GenericAPIView):
@@ -447,7 +544,12 @@ class AdminAuditLogDetailAPIView(GenericAPIView):
     queryset = models.AuditLog.objects.all().select_related('user')
     lookup_field = "id"
 
-    @swagger_auto_schema(tags=["Admin"])
+    @swagger_auto_schema(tags=["Admin"], request_body=None, responses={200 : AuditLogDetailSuccessResponseSerializer,
+                                                                       500 : ErrorResponseSerializer,
+                                                                       404 : ErrorResponseSerializer,
+                                                                       400 : ErrorResponseSerializer
+                                                                       }
+                        )
     def get(self,request,id):
         try:
             audit_log = self.get_queryset().get(id=id)
@@ -472,7 +574,11 @@ class AdminOrderListAPIView(GenericAPIView):
     serializer_class = serializers.AdminOrderListSerializer
     pagination_class = DefaultPagination
 
-    @swagger_auto_schema(tags=["Admin"])
+    @swagger_auto_schema(tags=["Admin"], request_body=None,responses={200 : OrderListSuccessResponseSerializer,
+                                                                      500 : ErrorResponseSerializer,
+                                                                      400 : ErrorResponseSerializer
+                                                                     }
+                        )
     def get(self,request):
         orders = self.queryset.order_by('-created_at')
 
@@ -481,7 +587,17 @@ class AdminOrderListAPIView(GenericAPIView):
 
         serializer = self.serializer_class(page, many=True)
 
-        return paginator.get_paginated_response(serializer.data)
+        paginated_data = {"count":paginator.page.paginator.count,
+                          "next" : paginator.get_next_link(),
+                          "previous" : paginator.get_previous_link(),
+                          "results" : serializer.data
+                         }
+        
+        return success_response(message = "Order List fetched successfuly.",
+                                data    = paginated_data,
+                                status_code = status.HTTP_200_OK
+                               )
+    
     
 
 
@@ -495,7 +611,11 @@ class AdminOrderDetailAPIView(GenericAPIView):
             return serializers.AdminOrderUpdateSerializer
         return serializers.AdminOrderDetailSerializer
 
-    @swagger_auto_schema(tags=["Admin"])
+    @swagger_auto_schema(tags=["Admin"], request_body=None, responses={200 : OrderDetailSuccessResponseSerializer,
+                                                                       404 : ErrorResponseSerializer,
+                                                                       500 : ErrorResponseSerializer
+                                                                       }
+                        )
     def get(self,request,id):
         try:
             order_instance = self.queryset.prefetch_related("items").select_related("user").get(order_id=id)
@@ -513,7 +633,13 @@ class AdminOrderDetailAPIView(GenericAPIView):
                                )
     
 
-    @swagger_auto_schema(tags=["Admin"])
+    @swagger_auto_schema(tags=["Admin"], request_body=serializers.AdminOrderUpdateSerializer,
+                         responses = {200 : OrderUpdateSuccessResponseSerializer,
+                                      404 : ErrorResponseSerializer,
+                                      400 : ErrorResponseSerializer,
+                                      500 : ErrorResponseSerializer
+                                     }
+                        )
     def patch(self,request,id):
         try:
             order_instance = self.queryset.get(order_id=id)
