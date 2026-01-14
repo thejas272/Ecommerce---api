@@ -17,7 +17,7 @@ from orders import models as orders_models
 from orders.helpers import calculate_checkout_price
 from orders import serializers as orders_serializers
 from common.helpers import success_response,error_response, normalize_validation_errors
-from common.schemas import SuccessResponseSerializer,ErrorResponseSerializer,CreateOrderSuccessResponseSerializer
+from common.schemas import SuccessResponseSerializer,ErrorResponseSerializer,CheckoutPreviewSuccessResponseSerializer,CreateOrderSuccessResponseSerializer,OrderListSuccessResponseSerializer,OrderDetailSuccessResponseSerializer,OrderCancelSuccessResponseSerializer
 
 # Create your views here.
 
@@ -26,7 +26,7 @@ class CheckoutPreviewAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(tags=["Order"], request_body=None,
-                         responses={200: orders_serializers.CheckoutPreviewResponseSerializer,
+                         responses={200: CheckoutPreviewSuccessResponseSerializer,
                                     400 : ErrorResponseSerializer,
                                     500 : ErrorResponseSerializer
                                    }
@@ -250,7 +250,7 @@ class OrderAPIView(APIView):
 
     
     
-    @swagger_auto_schema(tags=["Order"], request_body=None, responses={200 : orders_serializers.OrderListSerializer,
+    @swagger_auto_schema(tags=["Order"], request_body=None, responses={200 : OrderListSuccessResponseSerializer,
                                                                        400 : ErrorResponseSerializer,
                                                                        500 : ErrorResponseSerializer
                                                                       }
@@ -284,7 +284,7 @@ class OrderDetailAPIView(GenericAPIView):
     lookup_field = "order_id"
     serializer_class = orders_serializers.OrderDetailSerializer
     
-    @swagger_auto_schema(tags=["Order"], responses={200: orders_serializers.OrderDetailSerializer,
+    @swagger_auto_schema(tags=["Order"], responses={200: OrderDetailSuccessResponseSerializer,
                                                     404 : ErrorResponseSerializer,
                                                     500 : ErrorResponseSerializer
                                                    }
@@ -314,7 +314,7 @@ class OrderCancelAPIView(GenericAPIView):
     lookup_field = "order_id"
     serializer_class = orders_serializers.OrderCancelSerializer
 
-    @swagger_auto_schema(tags=["Order"], request_body=None, responses={200 : orders_serializers.OrderCancelSerializer,
+    @swagger_auto_schema(tags=["Order"], request_body=None, responses={200 : OrderCancelSuccessResponseSerializer,
                                                                        404 : ErrorResponseSerializer,
                                                                        400 : ErrorResponseSerializer,
                                                                        500 : ErrorResponseSerializer

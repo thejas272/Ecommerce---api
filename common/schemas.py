@@ -2,6 +2,7 @@ from rest_framework import serializers
 from accounts import serializers as accounts_serializers
 from products import serializers as products_serializers
 from carts import serializers as carts_serializers
+from orders import serializers as orders_serializers
 
 class ErrorResponseSerializer(serializers.Serializer):
     status  = serializers.BooleanField()
@@ -383,11 +384,44 @@ class UpdateCartQuantitySuccessResponseSerializer(SuccessResponseSerializer):
 
 #------------------Order-----------------------
 
+class CheckoutPreviewSuccessResponseSerializer(SuccessResponseSerializer):
+    data = orders_serializers.CheckoutPreviewResponseSerializer()
+
+
+
+
 
 
 class CreateOrderResponse(serializers.Serializer):
-    order_id = serializers.IntegerField()
-    status   = serializers.CharField()
-
+    order_id         = serializers.IntegerField()
+    order_status     = serializers.CharField()
+    payment_required = serializers.BooleanField()
+    
 class CreateOrderSuccessResponseSerializer(SuccessResponseSerializer):
     data = CreateOrderResponse()
+
+
+
+
+
+class OrderListPaginatedData(serializers.Serializer):
+    count    = serializers.IntegerField()
+    next     = serializers.CharField(allow_null=True)
+    previous = serializers.CharField(allow_null=True)
+    results  = orders_serializers.OrderListSerializer(many=True)
+
+class OrderListSuccessResponseSerializer(SuccessResponseSerializer):
+    data = OrderListPaginatedData()
+
+
+
+
+class OrderDetailSuccessResponseSerializer(SuccessResponseSerializer):
+    data = orders_serializers.OrderDetailSerializer()
+
+
+
+
+
+class OrderCancelSuccessResponseSerializer(SuccessResponseSerializer):
+    data = orders_serializers.OrderCancelSerializer()
