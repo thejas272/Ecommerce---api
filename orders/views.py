@@ -17,6 +17,7 @@ from orders import models as orders_models
 from orders.helpers import calculate_checkout_price
 from orders import serializers as orders_serializers
 from common.helpers import success_response,error_response, normalize_validation_errors
+from common.schemas import SuccessResponseSerializer,ErrorResponseSerializer,CreateOrderSuccessResponseSerializer
 
 # Create your views here.
 
@@ -24,7 +25,12 @@ from common.helpers import success_response,error_response, normalize_validation
 class CheckoutPreviewAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
-    @swagger_auto_schema(tags=["Order"], request_body=None, responses={200: orders_serializers.CheckoutPreviewResponseSerializer})
+    @swagger_auto_schema(tags=["Order"], request_body=None,
+                         responses={200: orders_serializers.CheckoutPreviewResponseSerializer,
+                                    400 : ErrorResponseSerializer,
+                                    500 : ErrorResponseSerializer
+                                   }
+                        )
     def post(self,request):
         default_address = accounts_models.AddressModel.objects.filter(user=request.user,is_default=True).first()
 
@@ -88,7 +94,12 @@ class OrderAPIView(APIView):
     permission_classes = [IsAuthenticated]
     pagination_class = DefaultPagination
 
-    @swagger_auto_schema(tags=["Order"], request_body=None)
+    @swagger_auto_schema(tags=["Order"], request_body=None,
+                         responses = {201 : CreateOrderSuccessResponseSerializer,
+                                      400 : ErrorResponseSerializer,
+                                      500 : ErrorResponseSerializer
+                                     }
+                        )
     def post(self,request):
         default_address = accounts_models.AddressModel.objects.filter(user=request.user,is_default=True).first()
 
@@ -199,7 +210,11 @@ class OrderAPIView(APIView):
 
     
     
-    @swagger_auto_schema(tags=["Order"], request_body=None, responses={200: orders_serializers.OrderListSerializer})
+    @swagger_auto_schema(tags=["Order"], request_body=None, responses={200 : orders_serializers.OrderListSerializer,
+                                                                       400 : ErrorResponseSerializer,
+                                                                       500 : ErrorResponseSerializer
+                                                                      }
+                        )
     def get(self,request):
         orders = orders_models.OrderModel.objects.filter(user=request.user).order_by('-created_at')
 
@@ -208,7 +223,17 @@ class OrderAPIView(APIView):
 
         serializer = orders_serializers.OrderListSerializer(page, many=True)
 
-        return paginator.get_paginated_response(serializer.data)
+        paginated_data = {"count":paginator.page.paginator.count,
+                          "next":paginator.get_next_link(),
+                          "previous":paginator.get_previous_link(),
+                          "results":serializer.data
+                         }
+        
+        return success_response(message = "Order list fetched successfuly.",
+                                data = paginated_data,
+                                status_code = status.HTTP_200_OK
+                               )
+
     
 
 
@@ -219,7 +244,11 @@ class OrderDetailAPIView(GenericAPIView):
     lookup_field = "order_id"
     serializer_class = orders_serializers.OrderDetailSerializer
     
-    @swagger_auto_schema(tags=["Order"], responses={200: orders_serializers.OrderDetailSerializer})
+    @swagger_auto_schema(tags=["Order"], responses={200: orders_serializers.OrderDetailSerializer,
+                                                    404 : ErrorResponseSerializer,
+                                                    500 : ErrorResponseSerializer
+                                                   }
+                        )
     def get(self,request,id):
         try:
             order_instance = orders_models.OrderModel.objects.filter(user=request.user).prefetch_related('items').get(order_id=id)
@@ -245,7 +274,12 @@ class OrderCancelAPIView(GenericAPIView):
     lookup_field = "order_id"
     serializer_class = orders_serializers.OrderCancelSerializer
 
-    @swagger_auto_schema(tags=["Order"], request_body=None, responses={200: orders_serializers.OrderCancelSerializer})
+    @swagger_auto_schema(tags=["Order"], request_body=None, responses={200 : orders_serializers.OrderCancelSerializer,
+                                                                       404 : ErrorResponseSerializer,
+                                                                       400 : ErrorResponseSerializer,
+                                                                       500 : ErrorResponseSerializer
+                                                                      }
+                        )
     def patch(self,request,id):
         try:
             order_instance = orders_models.OrderModel.objects.get(order_id=id,user=request.user)

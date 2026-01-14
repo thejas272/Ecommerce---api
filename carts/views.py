@@ -9,6 +9,7 @@ from rest_framework import status
 from common.pagination import DefaultPagination
 from common.helpers import success_response,error_response,normalize_validation_errors
 from rest_framework import serializers as drf_serializers
+from common.schemas import SuccessResponseSerializer,ErrorResponseSerializer,AddToCartSuccessResponseSerializer,CartListSuccessResponseSerializer,CartItemDeleteSuccessResponseSerializer,UpdateCartQuantitySuccessResponseSerializer
 # Create your views here.
 
 
@@ -21,7 +22,12 @@ class CartListCreateAPIView(GenericAPIView):
             return serializers.AddToCartSerializer
         return serializers.CartListSerializer
 
-    @swagger_auto_schema(tags=["Cart"])
+    @swagger_auto_schema(tags=["Cart"], request_body=serializers.AddToCartSerializer,
+                         responses = {201 : AddToCartSuccessResponseSerializer,
+                                      500 : ErrorResponseSerializer,
+                                      400 : ErrorResponseSerializer
+                                     }
+                        )
     def post(self,request):
         
         serializer = self.get_serializer(data=request.data, context={"request":request})
@@ -43,7 +49,11 @@ class CartListCreateAPIView(GenericAPIView):
                                  )
     
 
-    @swagger_auto_schema(tags=["Cart"])
+    @swagger_auto_schema(tags=["Cart"], request_body=None, responses = {200 : CartListSuccessResponseSerializer,
+                                                                        400 : ErrorResponseSerializer,
+                                                                        500 : ErrorResponseSerializer
+                                                                       }
+                        )
     def get(self,request):
         cart_items = cart_models.CartModel.objects.filter(user=request.user).select_related("product","product__brand","product__category").order_by('-created_at')
 
@@ -53,8 +63,17 @@ class CartListCreateAPIView(GenericAPIView):
 
         serializer = self.get_serializer(page, many=True)
 
-        return paginator.get_paginated_response(serializer.data)
+        paginated_data = {"count":paginator.page.paginator.count,
+                          "next":paginator.get_next_link(),
+                          "previous":paginator.get_previous_link(),
+                          "results":serializer.data
+                         }
         
+        return success_response(message = "Cart items fetched successfuly.",
+                                data    = paginated_data,
+                                status_code = status.HTTP_200_OK
+                               )
+    
     
 
 
@@ -63,7 +82,11 @@ class CartItemAPIView(GenericAPIView):
     permission_classes = [IsAuthenticated]
     lookup_field = "id"
 
-    @swagger_auto_schema(tags=["Cart"])
+    @swagger_auto_schema(tags=["Cart"],request_body = None, responses = {204 : CartItemDeleteSuccessResponseSerializer,
+                                                                         404 : ErrorResponseSerializer,
+                                                                         500 : ErrorResponseSerializer
+                                                                        }
+                        )
     def delete(self,request,id):
         try:
             cart_item = cart_models.CartModel.objects.get(id=id,user=request.user)
@@ -87,7 +110,13 @@ class CartItemQuantityAPIView(GenericAPIView):
     lookup_field = "id"
 
 
-    @swagger_auto_schema(tags=["Cart"])
+    @swagger_auto_schema(tags=["Cart"], request_body=serializers.UpdateCartQuantitySerializer,
+                         responses = {200 : UpdateCartQuantitySuccessResponseSerializer,
+                                      404 : ErrorResponseSerializer,
+                                      400 : ErrorResponseSerializer,
+                                      500 : ErrorResponseSerializer
+                                     }
+                        )
     def patch(self,request,id):
         try:
             cart_item = cart_models.CartModel.objects.get(id=id,user=request.user)
