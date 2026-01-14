@@ -5,9 +5,9 @@ from orders import models as orders_models
 
 class PaymentModel(models.Model):
     
-    PROVIDER_CHOICES = [("COD","Cod"),
-                        ("RAZORPAY","Razorpay"),
-                       ]
+    PAYMENT_METHOD_CHOICES = [("COD","Cod"),
+                              ("RAZORPAY","Razorpay"),
+                             ]
     
     STATUS_CHOICES = [("PENDING","Pending"),
                       ("SUCCESS","Success"),
@@ -15,8 +15,8 @@ class PaymentModel(models.Model):
                       ("REFUNDED","Refunded"),
                      ]
     
-    order    = models.OneToOneField(orders_models.OrderModel, related_name="payment", on_delete=models.CASCADE, null=False, blank=False)
-    provider = models.CharField(max_length=100, choices=PROVIDER_CHOICES, null=False, blank=False, db_index=True)
+    order    = models.ForeignKey(orders_models.OrderModel, related_name="payments", on_delete=models.CASCADE, null=False, blank=False)
+    method   = models.CharField(max_length=100, choices=PAYMENT_METHOD_CHOICES, null=False, blank=False, db_index=True)
     status   = models.CharField(max_length=100, choices=STATUS_CHOICES, default="PENDING", db_index=True)
     amount   = models.DecimalField(max_digits=10, decimal_places=2, null=False, blank=False)
     currency = models.CharField(max_length=50, default="INR", null=False, blank=False)

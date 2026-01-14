@@ -2,6 +2,7 @@ from rest_framework import serializers
 from accounts import serializers as accounts_serializers
 from carts import serializers as carts_serializers
 from orders import models
+from payments import models as payment_models
 
 class CheckoutPreviewRequestSerializer(serializers.ModelSerializer):
     pass
@@ -14,6 +15,12 @@ class CheckoutPreviewResponseSerializer(serializers.Serializer):
     subtotal     = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
     shipping_fee = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
     grand_total  = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
+
+
+
+class OrderCreateSerializer(serializers.Serializer):
+    payment_method = serializers.ChoiceField(required=True, choices=payment_models.PaymentModel.PAYMENT_METHOD_CHOICES)
+
 
 
 

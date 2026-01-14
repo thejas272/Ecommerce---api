@@ -62,6 +62,17 @@ class CheckoutPreviewAPIView(APIView):
                                                                }for p in inactive_products
                                                               ]
                                                      })
+            
+            for item in cart_items:
+                product_instance = item.product
+
+                if item.quantity > product_instance.stock:
+                    raise drf_serializers.ValidationError({"error_message":"Insuffiecient stock.",
+                                                           "data":{"product_id":product_instance.id,
+                                                                   "product_name":product_instance.name,
+                                                                   "product_slug":product_instance.slug,
+                                                                  }
+                                                         })
 
 
             subtotal,shipping_fee,grand_total = calculate_checkout_price(cart_items)
@@ -94,13 +105,39 @@ class OrderAPIView(APIView):
     permission_classes = [IsAuthenticated]
     pagination_class = DefaultPagination
 
-    @swagger_auto_schema(tags=["Order"], request_body=None,
+    @swagger_auto_schema(tags=["Order"], request_body = orders_serializers.OrderCreateSerializer,
                          responses = {201 : CreateOrderSuccessResponseSerializer,
                                       400 : ErrorResponseSerializer,
                                       500 : ErrorResponseSerializer
                                      }
                         )
     def post(self,request):
+
+        serializer = orders_serializers.OrderCreateSerializer(data=request.data)
+        try:
+            if serializer.is_valid(raise_exception=True):
+                payment_method = serializer.validated_data["payment_method"]
+
+        except drf_serializers.ValidationError as e:
+            message,data = normalize_validation_errors(e.detail)
+            
+            return error_response(message = message,
+                                  data    = data,
+                                  status_code = status.HTTP_400_BAD_REQUEST
+                                 )
+        
+
+        if payment_method == "COD":
+
+            payment_status   = "PENDING"
+            payment_required = False
+
+        elif payment_method == "RAZORPAY":
+            
+            payment_status   = "PENDING"
+            payment_required = True
+
+
         default_address = accounts_models.AddressModel.objects.filter(user=request.user,is_default=True).first()
 
         if not default_address:
@@ -144,8 +181,7 @@ class OrderAPIView(APIView):
                         raise drf_serializers.ValidationError({"error_message":"Insufficient stock.",
                                                                "data":{"product_id":product_instance.id,
                                                                        "product_name":product_instance.name,
-                                                                       "product_slug":product_instance.slug,
-                                                                       "message":"Insufficient stock."
+                                                                       "product_slug":product_instance.slug
                                                                       }
                                                               })
                     else:
@@ -185,23 +221,27 @@ class OrderAPIView(APIView):
                                     )
                 orders_models.OrderItemModel.objects.bulk_create(order_items)
 
-                payment_models.PaymentModel.objects.create(order = order,
-                                                        provider = "COD",
-                                                        status = "PENDING",
-                                                        amount = grand_total,
-                                                        currency = "INR",
-                                                        )
+
+
+                payment_models.PaymentModel.objects.create(order    = order,
+                                                           method = payment_method,
+                                                           status   = payment_status,
+                                                           amount   = grand_total,
+                                                           currency = "INR",
+                                                          )
                 
                 cart_items.delete()
-                return success_response(message = "Order Placed successfully.",
-                                        data    = {"order_id":order.order_id,
-                                                   "status":order.status,
+                return success_response(message = "Order info created successfuly.",
+                                        data    = {"order_id"        : order.order_id,
+                                                   "order_status"    : order.status,
+                                                   "payment_required": payment_required
                                                   },
                                         status_code = status.HTTP_201_CREATED
                                        )
         
         except drf_serializers.ValidationError as e:
             message,data = normalize_validation_errors(e.detail)
+            
             return error_response(message = message,
                                   data    = data,
                                   status_code = status.HTTP_400_BAD_REQUEST
