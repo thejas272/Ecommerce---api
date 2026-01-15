@@ -17,3 +17,6 @@ django-mptt>=0.15,<1.0
 # Environment variables
 python-dotenv>=1.0,<2.0
 
+
+# Payment Gateway
+razorpay>=1.4,<2.0

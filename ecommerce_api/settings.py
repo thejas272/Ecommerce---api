@@ -60,6 +60,11 @@ INSTALLED_APPS = [
 ]
 
 
+RAZORPAY_KEY_ID = os.getenv("RAZORPAY_KEY_ID")
+RAZORPAYKEY_SECRET = os.getenv("RAZORPAYKEY_SECRET")
+
+
+
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',

@@ -425,3 +425,21 @@ class OrderDetailSuccessResponseSerializer(SuccessResponseSerializer):
 
 class OrderCancelSuccessResponseSerializer(SuccessResponseSerializer):
     data = orders_serializers.OrderCancelSerializer()
+
+
+
+
+
+
+
+#--------------------Payments -----------------------
+
+class PaymentInitiateResponse(serializers.Serializer):
+    razorpay_order_id = serializers.CharField()
+    razorpay_key = serializers.CharField()
+    order_id = serializers.CharField()
+    amount   = serializers.IntegerField()
+    currency = serializers.CharField() 
+    
+class PaymentInitiateSuccessResponseSerializer(SuccessResponseSerializer):
+    data = PaymentInitiateResponse()
