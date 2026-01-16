@@ -62,6 +62,7 @@ INSTALLED_APPS = [
 
 RAZORPAY_KEY_ID = os.getenv("RAZORPAY_KEY_ID")
 RAZORPAYKEY_SECRET = os.getenv("RAZORPAYKEY_SECRET")
+RAZORPAY_WEBHOOK_SECRET = os.getenv("RAZORPAY_WEBHOOK_SECRET")
 
 
 
@@ -99,6 +100,38 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
     'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
 }
+
+
+
+LOGGING = {
+    "version":1,
+    "disable_existing_loggers":False,
+    "formatters":{
+        "verbose":{
+            "format" : "[{asctime}] {levelname} {name}: {message}",
+            "style":"{",
+        },
+    },
+
+    "handlers":{
+        "payments_file":{
+            "class":"logging.FileHandler",
+            "filename":  BASE_DIR / "logs" / "payments.log",
+            "formatter":"verbose",
+        },
+    },
+
+    "loggers":{
+        "payments":{
+            "handlers":["payments_file"],
+            "level":"INFO",
+            "propagate":False,
+        },
+    },
+}
+
+
+
 
 
 

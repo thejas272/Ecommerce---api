@@ -22,7 +22,6 @@ class PaymentModel(models.Model):
     currency = models.CharField(max_length=50, default="INR", null=False, blank=False)
 
     provider_order_id   = models.CharField(max_length=255, null=True, blank=True)
-    provider_signature  = models.CharField(max_length=255, null=True, blank=True)
     provider_payment_id = models.CharField(max_length=255, null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
