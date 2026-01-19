@@ -15,6 +15,8 @@ import razorpay
 import json
 from rest_framework.response import Response
 from django.db import transaction
+from django.utils import timezone
+from datetime import timedelta
 import logging
 logger = logging.getLogger("payments")
 
@@ -123,6 +125,7 @@ class PaymentInitiateAPIView(GenericAPIView):
 
 class PaymentWebhookAPIView(GenericAPIView):
     permission_classes = []
+    swagger_schema=None
 
     def post(self,request):
         payload = request.body.decode('utf-8')
@@ -214,3 +217,111 @@ class PaymentWebhookAPIView(GenericAPIView):
                           )
             return Response(status=200)
 
+
+
+class PaymentRetryAPIView(GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = payments_serializers.PaymentInitiateSerializer
+    @swagger_auto_schema(tags=["Payment"], request_body=payments_serializers.PaymentInitiateSerializer,
+                         responses={200 : PaymentInitiateSuccessResponseSerializer,
+                                    500 : ErrorResponseSerializer,
+                                    400 : ErrorResponseSerializer,
+                                    404 : ErrorResponseSerializer,
+                                    409 : ErrorResponseSerializer,
+                                    502 : ErrorResponseSerializer
+                                    })
+
+    def post(self,request):
+        serializer = self.serializer_class(data=request.data)
+
+        if serializer.is_valid(raise_exception=True):
+            order_id = serializer.validated_data["order_id"]
+
+        try:
+            order_instance = orders_model.OrderModel.objects.get(order_id=order_id,user=request.user)
+        except orders_model.OrderModel.DoesNotExist:
+            return error_response(message = "Invalid order id",
+                                  data={"order_id":order_id},
+                                  status_code = status.HTTP_400_BAD_REQUEST
+                                 )
+        
+        if order_instance.status == "PAID":
+            return error_response(message = "Payment already done.",
+                                  data    = order_id,
+                                  status_code = status.HTTP_400_BAD_REQUEST
+                                 )
+        
+
+        
+        prev_payment_instance = payments_model.PaymentModel.objects.filter(order=order_instance,method="RAZORPAY").order_by('-created_at').first()
+        
+        if not prev_payment_instance:
+            return error_response(message = "No initial payment attempt found.",
+                                  data    = {"order_id":order_id},
+                                  status_code = status.HTTP_404_NOT_FOUND
+                                 )
+        
+        if prev_payment_instance.status == "SUCCESS":
+            return error_response(message = "Payment already completed.",
+                                  data    = {"order_id":order_id},
+                                  status_code = status.HTTP_400_BAD_REQUEST
+                                 )
+        
+        if prev_payment_instance.status == "REFUNDED":
+            return error_response(message = "Payment was refunded, retry not available.",
+                                  data    = {"order_id":order_id},
+                                  status_code = status.HTTP_400_BAD_REQUEST
+                                 )
+        
+        cutoff_time = timezone.now() - timedelta(minutes=15)
+        
+        if prev_payment_instance.status == "PENDING":
+            if prev_payment_instance.created_at >= cutoff_time:
+                return error_response(message = "Previous payment is still in progress.",
+                                      data    = {"order_id":order_id},
+                                      status_code = status.HTTP_409_CONFLICT
+                                     )
+     
+
+        logger.info("Payment retry initiated",extra={"order_id":order_id,
+                                                     "previous_payment_status":prev_payment_instance.status,
+                                                     "previous_payment_id":prev_payment_instance.id
+                                                    }
+                   )
+
+        try:
+            razorpay_order = razorpay_client.order.create(amount  = int(order_instance.grand_total * 100),
+                                                          receipt = order_id,
+                                                          currency = "INR"
+                                                         )
+        except razorpay.errors.RazorpayError:
+            logger.warning("Razorpay failed to respond to payment reattempt.",extra={"order_id":order_id})
+
+            return error_response(message = "Payment gateway unavailable.",
+                                  status_code = status.HTTP_502_BAD_GATEWAY
+                                 )
+        
+        payments_model.PaymentModel.objects.create(order    = order_instance,
+                                                   method   = "RAZORPAY",
+                                                   status   = "PENDING",
+                                                   amount   = order_instance.grand_total,
+                                                   currency = "INR",
+                                                   provider_order_id = razorpay_order["id"]
+                                                   )
+        
+        return success_response(message = "Payment re-initiation successful",
+                                data    = {"razorpay_order_id":razorpay_order["id"],
+                                           "razorpay_key":settings.RAZORPAY_KEY_ID,
+                                           "order_id":order_id,
+                                           "amount":razorpay_order["amount"],
+                                           "currency":razorpay_order["currency"],
+                                          },
+                                status_code = status.HTTP_200_OK
+                                )
+        
+        
+
+        
+
+
+        
