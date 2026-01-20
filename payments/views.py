@@ -10,7 +10,7 @@ from rest_framework import status
 from payments.razorpay import razorpay_client
 from django.conf import settings
 from rest_framework import serializers as drf_serializers
-from common.schemas import ErrorResponseSerializer,PaymentInitiateSuccessResponseSerializer
+from common.schemas import ErrorResponseSerializer,PaymentInitiateSuccessResponseSerializer,PaymentStatusSuccessResponseSerializer
 import razorpay
 import json
 from rest_framework.response import Response
@@ -301,13 +301,16 @@ class PaymentRetryAPIView(GenericAPIView):
                                   status_code = status.HTTP_502_BAD_GATEWAY
                                  )
         
-        payments_model.PaymentModel.objects.create(order    = order_instance,
-                                                   method   = "RAZORPAY",
-                                                   status   = "PENDING",
-                                                   amount   = order_instance.grand_total,
-                                                   currency = "INR",
-                                                   provider_order_id = razorpay_order["id"]
-                                                   )
+        with transaction.atomic():
+            payments_model.PaymentModel.objects.create(order    = order_instance,
+                                                    method   = "RAZORPAY",
+                                                    status   = "PENDING",
+                                                    amount   = order_instance.grand_total,
+                                                    currency = "INR",
+                                                    provider_order_id = razorpay_order["id"]
+                                                    )
+            prev_payment_instance.status = "FAILED"
+            prev_payment_instance.save()
         
         return success_response(message = "Payment re-initiation successful",
                                 data    = {"razorpay_order_id":razorpay_order["id"],
@@ -324,4 +327,49 @@ class PaymentRetryAPIView(GenericAPIView):
         
 
 
+class PaymentStatusAPIView(GenericAPIView):
+    serializer_class = payments_serializers.PaymentStatusSerializer
+    lookup_field = "order_id"
+
+    @swagger_auto_schema(tags=["Payment"],
+                        responses = {200 : PaymentStatusSuccessResponseSerializer,
+                                     500 : ErrorResponseSerializer,
+                                     404 : ErrorResponseSerializer
+                                    }
+                       )
+    def get(self,request,order_id):
+        try:
+            order_instance = orders_model.OrderModel.objects.get(order_id=order_id,user=request.user)
+        except orders_model.OrderModel.DoesNotExist:
+            return error_response(message = "Invalid order id",
+                                  data    = {"order_id":order_id},
+                                  status_code = status.HTTP_404_NOT_FOUND
+                                 )
+        
+        if not order_instance.payments.exists():
+            return error_response(message = "No payment attempts done.",
+                                  data    =  {"order_id":order_id},
+                                  status_code = status.HTTP_404_NOT_FOUND
+                                 )
+        
+        payment_instance = order_instance.payments.order_by('-created_at').first()
+
+        cutoff_time = timezone.now() - timedelta(minutes=15)
+        retry_allowed = False
+        if payment_instance.status == "FAILED" or (payment_instance.status == "PENDING" and payment_instance.created_at < cutoff_time):
+            retry_allowed = True 
+
+        
+        data = {"order_id":order_instance.order_id,
+                "order_status":order_instance.status,
+                "payment_status": payment_instance.status,
+                "retry_allowed": retry_allowed
+               }
+        
+        serializer = self.serializer_class(instance=data)
+
+        return success_response(message = "Payment status fetched successfuly.",
+                                data    = serializer.data,
+                                status_code = status.HTTP_200_OK
+                               )
         

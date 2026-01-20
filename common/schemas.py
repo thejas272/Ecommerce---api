@@ -3,7 +3,7 @@ from accounts import serializers as accounts_serializers
 from products import serializers as products_serializers
 from carts import serializers as carts_serializers
 from orders import serializers as orders_serializers
-
+from payments import serializers as payments_serializers
 class ErrorResponseSerializer(serializers.Serializer):
     status  = serializers.BooleanField()
     message = serializers.CharField()
@@ -443,3 +443,8 @@ class PaymentInitiateResponse(serializers.Serializer):
     
 class PaymentInitiateSuccessResponseSerializer(SuccessResponseSerializer):
     data = PaymentInitiateResponse()
+
+
+
+class PaymentStatusSuccessResponseSerializer(SuccessResponseSerializer):
+    data = payments_serializers.PaymentStatusSerializer()
