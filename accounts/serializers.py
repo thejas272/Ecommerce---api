@@ -9,6 +9,7 @@ from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, Bl
 from django.conf import settings
 from orders import models as orders_models
 from accounts.helpers import create_audit_log
+from payments import models as payments_model
 
 class RegsiterSerializer(serializers.ModelSerializer):
     first_name = serializers.CharField(required=True, max_length=30)
@@ -523,3 +524,14 @@ class AdminOrderUpdateSerializer(serializers.ModelSerializer):
             create_audit_log(user=request.user,action=action,message=message,instance=order,changes=changes)
 
             return order
+        
+
+
+
+class AdminOrderPaymentHistorySerializer(serializers.ModelSerializer):
+    order_id = serializers.CharField(source="order.order_id",read_only=True)
+    
+    class Meta:
+        model = payments_model.PaymentModel
+        fields = ["id","order_id","method","status","amount","currency","provider_order_id","provider_payment_id","created_at","updated_at"]
+

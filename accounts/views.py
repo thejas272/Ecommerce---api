@@ -18,7 +18,8 @@ from rest_framework.permissions import IsAdminUser
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 from common.helpers import success_response,error_response,normalize_validation_errors
 from orders import models as orders_models
-from common.schemas import RegisterSuccessResponseSerializer,LoginSuccessResponseSerializer,ErrorResponseSerializer,SuccessResponseSerializer,RefreshTokenSuccessSerializer,ProfileSuccessResponseSerializer,UpdateProfileSuccessResponseSerializer,CreateAddressSuccessResponse,AddressListSuccessResponseSerializer,AddressDeleteSuccessResponse,UpdateAddressSuccessResponseSerializer,AddressDetailSuccessResponse,UserListSuccessResponseSerializer, UserDetailSuccessResponseSerializer,AuditLogListSuccessResponseSerializer,AuditLogDetailSuccessResponseSerializer,OrderListSuccessResponseSerializer,OrderDetailSuccessResponseSerializer,OrderUpdateSuccessResponseSerializer
+from payments import models as payments_model
+from common.schemas import RegisterSuccessResponseSerializer,LoginSuccessResponseSerializer,ErrorResponseSerializer,SuccessResponseSerializer,RefreshTokenSuccessSerializer,ProfileSuccessResponseSerializer,UpdateProfileSuccessResponseSerializer,CreateAddressSuccessResponse,AddressListSuccessResponseSerializer,AddressDeleteSuccessResponse,UpdateAddressSuccessResponseSerializer,AddressDetailSuccessResponse,UserListSuccessResponseSerializer, UserDetailSuccessResponseSerializer,AuditLogListSuccessResponseSerializer,AuditLogDetailSuccessResponseSerializer,OrderListSuccessResponseSerializer,OrderDetailSuccessResponseSerializer,OrderUpdateSuccessResponseSerializer,AdminOrderPaymentHistorySuccessResponseSerializer
 # Create your views here.
 
 
@@ -671,4 +672,40 @@ class AdminOrderDetailAPIView(GenericAPIView):
         
 
 
-    
+class AdminOrderPaymentHistoryAPIView(GenericAPIView):
+    permission_classes = [IsAuthenticated,IsAdminUser]
+    serializer_class = serializers.AdminOrderPaymentHistorySerializer
+    pagination_class = DefaultPagination
+    lookup_field = "order_id"
+
+    @swagger_auto_schema(tags=["Admin"], responses={200 : AdminOrderPaymentHistorySuccessResponseSerializer,
+                                                    500 : ErrorResponseSerializer,
+                                                    404 : ErrorResponseSerializer
+                                                   }
+                        )
+    def get(self,request,order_id):
+        try:
+            order_instance = orders_models.OrderModel.objects.get(order_id=order_id)
+        except orders_models.OrderModel.DoesNotExist:
+            return error_response(message = "Invalid order id.",
+                                  data    = {"order_id":order_id},
+                                  status_code = status.HTTP_404_NOT_FOUND
+                                 )
+        
+        payment_instances = order_instance.payments.all()
+
+        paginator = self.pagination_class()
+        page = paginator.paginate_queryset(payment_instances,request)
+
+        serializer = self.serializer_class(page, many=True)
+
+        paginated_data = {"count":paginator.page.paginator.count,
+                          "next":paginator.get_next_link(),
+                          "previous":paginator.get_previous_link(),
+                          "results":serializer.data
+                         }
+
+        return success_response(message = "Order payment records fetched successfuly.",
+                                data    =  paginated_data,
+                                status_code = status.HTTP_200_OK
+                               )

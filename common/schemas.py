@@ -4,6 +4,9 @@ from products import serializers as products_serializers
 from carts import serializers as carts_serializers
 from orders import serializers as orders_serializers
 from payments import serializers as payments_serializers
+
+
+
 class ErrorResponseSerializer(serializers.Serializer):
     status  = serializers.BooleanField()
     message = serializers.CharField()
@@ -448,3 +451,16 @@ class PaymentInitiateSuccessResponseSerializer(SuccessResponseSerializer):
 
 class PaymentStatusSuccessResponseSerializer(SuccessResponseSerializer):
     data = payments_serializers.PaymentStatusSerializer()
+
+
+
+
+class AdminOrderPaymentHistoryPaginatedData(serializers.Serializer):
+    count    = serializers.IntegerField()
+    next     = serializers.CharField(allow_null=True)
+    previous = serializers.CharField(allow_null=True)
+    results  = accounts_serializers.AdminOrderPaymentHistorySerializer(many=True)
+
+
+class AdminOrderPaymentHistorySuccessResponseSerializer(SuccessResponseSerializer):
+    data = AdminOrderPaymentHistoryPaginatedData()
