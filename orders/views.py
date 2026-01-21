@@ -17,7 +17,7 @@ from orders import models as orders_models
 from orders.helpers import calculate_checkout_price
 from orders import serializers as orders_serializers
 from common.helpers import success_response,error_response, normalize_validation_errors
-from common.schemas import SuccessResponseSerializer,ErrorResponseSerializer,CheckoutPreviewSuccessResponseSerializer,CreateOrderSuccessResponseSerializer,OrderListSuccessResponseSerializer,OrderDetailSuccessResponseSerializer,OrderCancelSuccessResponseSerializer
+from common.schemas import SuccessResponseSerializer,ErrorResponseSerializer,CheckoutPreviewSuccessResponseSerializer,CreateOrderSuccessResponseSerializer,OrderListSuccessResponseSerializer,OrderDetailSuccessResponseSerializer,OrderCancelSuccessResponseSerializer,OrderItemCancelSuccessResponseSerializer
 
 # Create your views here.
 
@@ -217,6 +217,7 @@ class OrderAPIView(APIView):
                                                                     unit_price    = cart_item.unit_price,
                                                                     quantity      = cart_item.quantity,
                                                                     total_price   = cart_item.total_price,
+                                                                    status        = "PENDING"
                                                                     )
                                     )
                 orders_models.OrderItemModel.objects.bulk_create(order_items)
@@ -340,9 +341,49 @@ class OrderCancelAPIView(GenericAPIView):
                                        )
         except drf_serializers.ValidationError as e:    
             message,data = normalize_validation_errors(e.detail)
+
             return error_response(message = message,
                                   data    = data,
                                   status_code = status.HTTP_400_BAD_REQUEST
                                  )
         
+
+
+class OrderItemCancelAPIView(GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = orders_serializers.OrderItemCancelSerializer
+    lookup_field = "id"
+
+    @swagger_auto_schema(tags=["Order"], request_body=None, responses={200 : OrderItemCancelSuccessResponseSerializer,
+                                                                       400 : ErrorResponseSerializer,
+                                                                       404 : ErrorResponseSerializer,
+                                                                       500 : ErrorResponseSerializer
+                                                                      }
+                        )
+    def patch(self,request,id):
+        try:
+            order_item = orders_models.OrderItemModel.objects.get(id=id,order__user=request.user)
+        except orders_models.OrderItemModel.DoesNotExist:
+            return error_response(message = "Invalid order item id.",
+                                  data    = {"order_item_id":id},
+                                  status_code = status.HTTP_404_NOT_FOUND
+                                 )
+        
+        serializer = self.serializer_class(instance=order_item, data={}, context={"request":request})
+
+        try:
+            if serializer.is_valid():
+                serializer.save()
+                return success_response(message = "Item cancelled successfuly.",
+                                        data    = serializer.data,
+                                        status_code = status.HTTP_200_OK
+                                    )
+        except drf_serializers.ValidationError as e:
+            message,data = normalize_validation_errors(e.detail)
+
+            return error_response(message = message,
+                                  data    = data,
+                                  status_code = status.HTTP_400_BAD_REQUEST
+                                 )
+
 

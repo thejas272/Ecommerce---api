@@ -430,7 +430,8 @@ class OrderCancelSuccessResponseSerializer(SuccessResponseSerializer):
     data = orders_serializers.OrderCancelSerializer()
 
 
-
+class OrderItemCancelSuccessResponseSerializer(SuccessResponseSerializer):
+    data = orders_serializers.OrderItemCancelSerializer()
 
 
 

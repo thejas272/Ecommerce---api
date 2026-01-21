@@ -3,6 +3,8 @@ from accounts import serializers as accounts_serializers
 from carts import serializers as carts_serializers
 from orders import models
 from payments import models as payment_models
+from django.db import transaction
+from orders import models as orders_model
 
 class CheckoutPreviewRequestSerializer(serializers.ModelSerializer):
     pass
@@ -53,6 +55,8 @@ class OrderDetailSerializer(serializers.ModelSerializer):
 
 
 
+
+
 class OrderCancelSerializer(serializers.ModelSerializer):
 
     class Meta:
@@ -62,14 +66,77 @@ class OrderCancelSerializer(serializers.ModelSerializer):
 
     
     def update(self, instance, validated_data):
-        if instance.status in ["SHIPPED","DELIVERED"]:
-            raise serializers.ValidationError({"error_message":"Order cannot be cancelled once shipped.",
+
+        order_items = instance.items.all()
+        blocked_items = order_items.filter(status__in=["SHIPPED","DELIVERED","CANCELLED","REFUNDED"])
+
+        if blocked_items.exists():
+            item = blocked_items.first()
+            raise serializers.ValidationError({"error_message":"Order contains items that cannot be cancelled",
+                                               "data":{"order_id":instance.order_id,
+                                                       "order_item_id":item.id,
+                                                       "order_item_name":item.name
+                                                      }
+                                             }) 
+        
+
+        if instance.status in ["SHIPPED","DELIVERED","CANCELLED"]:
+            raise serializers.ValidationError({"error_message":"Order cannot be cancelled.",
                                                "data":{"order_id":instance.order_id,
                                                        "order_status":instance.status
                                                       }
                                               })
         
-        instance.status = "CANCELLED"
 
-        instance.save()
+
+        with transaction.atomic():
+            instance = orders_model.OrderModel.objects.select_for_update().get(id=instance.id)
+            
+            instance.status = "CANCELLED"
+            instance.save(update_fields=["status"])
+
+            order_items.update(status="CANCELLED")        
+
+        return instance
+    
+
+
+
+class OrderItemCancelSerializer(serializers.ModelSerializer):
+    order_id = serializers.CharField(source="order.order_id", read_only=True)
+
+    class Meta:
+        model = models.OrderItemModel
+        fields = ["id","status","order_id"]
+        read_only_fields = ["id","status","order_id"]
+
+    
+    def update(self, instance, validated_data):
+
+        if instance.status in ["SHIPPED","DELIVERED","CANCELLED","REFUNDED"]:
+            raise serializers.ValidationError({"error_message":"Order cannot be cancelled.",
+                                               "data":{"order_id":instance.order.order_id,
+                                                       "order_status":instance.order.status,
+                                                       "order_item_status":instance.status
+                                                      }
+                                             })
+        
+        order = instance.order
+
+
+        with transaction.atomic():
+            order = orders_model.OrderModel.objects.select_for_update().get(id=order.id)
+
+            instance.status = "CANCELLED"
+            instance.save(update_fields=["status"])
+
+            order_items = order.items.all()
+
+            remaining_items = order_items.exclude(status="CANCELLED")
+            
+            if not remaining_items.exists():
+                order.status="CANCELLED"
+                order.save(update_fields=["status"])
+
+
         return instance
