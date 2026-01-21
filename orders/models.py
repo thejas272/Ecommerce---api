@@ -20,8 +20,10 @@ class OrderModel(models.Model):
                      ("CONFIRMED","Confirmed"),
                      ("SHIPPED","Shipped"),
                      ("DELIVERED","Delivered",),
+                     ("RETURN_REQUESTED","Return Requested"),
                      ("RETURNED","Returned"),
                      ("CANCELLED","Cancelled"),
+                     ("REFUNDED","Refunded")
                     ]
     
     user = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="orders", on_delete=models.CASCADE, null=False, blank=False)
@@ -61,6 +63,7 @@ class OrderModel(models.Model):
 class OrderItemModel(models.Model):
 
     ORDER_ITEM_STATUS_CHOICES = {("PENDING","Pending"),
+                                 ("PAID","Paid"),
                                  ("CONFIRMED","Confirmed"),
                                  ("SHIPPED","Shipped"),
                                  ("DELIVERED","Delivered"),

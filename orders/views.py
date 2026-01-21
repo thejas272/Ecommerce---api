@@ -387,3 +387,80 @@ class OrderItemCancelAPIView(GenericAPIView):
                                  )
 
 
+
+class OrderReturnAPIView(GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = orders_serializers.OrderReturnSerializer
+    lookup_field = "order_id"
+
+    @swagger_auto_schema(tags=["Order"], request_body=None, responses={500 : ErrorResponseSerializer,
+                                                                       400 : ErrorResponseSerializer,
+                                                                       404 : ErrorResponseSerializer
+                                                                      }
+                        )
+    def patch(self,request,order_id):
+        try:
+            order_instance = orders_models.OrderModel.objects.get(user=request.user,order_id=order_id)
+        except orders_models.OrderModel.DoesNotExist:
+            return error_response(message = "Invalid order id.",
+                                  data    = {"order_id":order_id},
+                                  status_code = status.HTTP_404_NOT_FOUND
+                                 )
+        
+        serializer = self.serializer_class(instance=order_instance, data={})
+
+        try:
+            if serializer.is_valid():
+                serializer.save()
+                return success_response(message = "Order return request successful.",
+                                        data    = serializer.data,
+                                        status_code = status.HTTP_200_OK
+                                    )
+        except drf_serializers.ValidationError as e:
+            message,data = normalize_validation_errors(e.detail)
+
+            return error_response(message = message,
+                                  data    = data,
+                                  status_code = status.HTTP_400_BAD_REQUEST
+                                 )
+        
+
+
+
+class OrderItemReturnAPIView(GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = orders_serializers.OrderItemReturnSerializer
+    lookup_field = "id"
+
+    @swagger_auto_schema(tags=["Order"], request_body=None, responses={400 : ErrorResponseSerializer,
+                                                                       404 : ErrorResponseSerializer,
+                                                                       500 : ErrorResponseSerializer
+                                                                      }
+                        )
+    
+    def patch(self,request,id):
+        try:
+            order_item = orders_models.OrderItemModel.objects.get(id=id,order__user=request.user)
+        except orders_models.OrderItemModel.DoesNotExist:
+            return error_response(message = "Invalid order item id.",
+                                  data    = {"order_item_id":id},
+                                  status_code = status.HTTP_404_NOT_FOUND 
+                                 )
+        
+        serializer = self.serializer_class(instance=order_item, data={})
+
+        try:
+            if serializer.is_valid():
+                serializer.save()
+                return success_response(message = "Order item return request successful.",
+                                        data    = serializer.data,
+                                        status_code = status.HTTP_200_OK
+                                       )
+            
+        except drf_serializers.ValidationError as e:
+            message,data = normalize_validation_errors(e.detail)
+
+            return error_response(message = message,
+                                  data    = data,
+                                  status_code = status.HTTP_400_BAD_REQUEST
+                                 )

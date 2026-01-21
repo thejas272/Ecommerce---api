@@ -140,3 +140,87 @@ class OrderItemCancelSerializer(serializers.ModelSerializer):
 
 
         return instance
+    
+
+
+
+class OrderReturnSerializer(serializers.ModelSerializer):
+    
+    class Meta:
+        model = models.OrderModel
+        fields = ["order_id","status"]
+        read_only_fields = ["order_id","status"]
+
+    
+    def update(self, instance, validated_data):
+
+        order_items =  instance.items.all()
+        
+        undelivered_items = order_items.exclude(status="DELIVERED")    
+        if undelivered_items.exists():
+            item = undelivered_items.first()
+            raise serializers.ValidationError({"error_message":"Order cannot be returned.",
+                                               "data":{"order_id":instance.order_id,
+                                                       "order_item_id":item.id,
+                                                       "order_item_name":item.name
+                                                      }
+                                             })
+        
+        if instance.status not in ["DELIVERED"]:
+            raise serializers.ValidationError({"error_message":"Order isn't fully delivered yet.",
+                                               "data":{"order_id":instance.order_id,
+                                                       "order_status":instance.status
+                                                      }
+                                             })
+
+
+        with transaction.atomic():
+            instance = orders_model.OrderModel.objects.select_for_update().get(id=instance.id)
+
+            instance.status = "RETURN_REQUESTED"
+            instance.save(update_fields=["status"])
+
+            order_items.update(status="RETURN_REQUESTED")
+
+        
+        return instance
+    
+
+
+class OrderItemReturnSerializer(serializers.ModelSerializer):
+    order_id = serializers.CharField(source="order.order_id", read_only=True)
+
+    class Meta:
+        model = models.OrderItemModel
+        fields = ["id","order_id","status"]
+        read_only_fields = ["id","order_id","status"]
+
+
+    def update(self, instance, validated_data):
+        
+        if instance.status not in ["DELIVERED"]:
+            raise serializers.ValidationError({"error_message":"Order item cannot be returned.",
+                                               "data":{"order_item_id":instance.id,
+                                                       "order_item_status":instance.status
+                                                      }
+                                             })
+
+        order = instance.order
+
+        with transaction.atomic():
+            order = orders_model.OrderModel.objects.select_for_update().get(id=order.id)
+
+            instance.status = "RETURN_REQUESTED"
+            instance.save(update_fields=["status"])
+            
+            order_items = order.items.all()
+            remaining_items = order_items.exclude(status="RETURN_REQUESTED")
+
+            if not remaining_items.exists():
+                order.status = "RETURN_REQUESTED"
+                order.save(update_fields=["status"])
+
+
+        return instance
+
+    
