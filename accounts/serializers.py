@@ -535,3 +535,40 @@ class AdminOrderPaymentHistorySerializer(serializers.ModelSerializer):
         model = payments_model.PaymentModel
         fields = ["id","order_id","method","status","amount","currency","provider_order_id","provider_payment_id","created_at","updated_at"]
 
+
+
+
+class AdminMarkOrderItemReturnedSerializer(serializers.ModelSerializer):
+    order_id = serializers.CharField(source="order.order_id", read_only=True)
+
+    class Meta:
+        model = orders_models.OrderItemModel
+        fields = ["id","order_id","status"]
+        read_only_fields = ["id","order_id","status"]
+
+    def update(self, instance, validated_data):
+        
+        if instance.status != "RETURN_REQUESTED": 
+            raise serializers.ValidationError({"error_message":"Order item return request not recieved.",
+                                               "data":{"order_item_id":instance.id,
+                                                       "order_id":instance.order.order_id,
+                                                       "status":instance.status
+                                                      }
+                                             })
+        order = instance.order
+
+        with transaction.atomic():
+            order = orders_models.OrderModel.objects.select_for_update().get(id=order.id)
+
+            instance.status = "RETURNED"
+            instance.save(update_fields=["status"])
+
+            order_items = order.items.all()
+            existing_items = order_items.exclude(status="RETURNED")
+
+            if not existing_items.exists():
+                order.status = "RETURNED"
+                order.save(update_fields=["status"])
+
+
+        return instance

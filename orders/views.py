@@ -17,7 +17,7 @@ from orders import models as orders_models
 from orders.helpers import calculate_checkout_price
 from orders import serializers as orders_serializers
 from common.helpers import success_response,error_response, normalize_validation_errors
-from common.schemas import SuccessResponseSerializer,ErrorResponseSerializer,CheckoutPreviewSuccessResponseSerializer,CreateOrderSuccessResponseSerializer,OrderListSuccessResponseSerializer,OrderDetailSuccessResponseSerializer,OrderCancelSuccessResponseSerializer,OrderItemCancelSuccessResponseSerializer
+from common.schemas import SuccessResponseSerializer,ErrorResponseSerializer,CheckoutPreviewSuccessResponseSerializer,CreateOrderSuccessResponseSerializer,OrderListSuccessResponseSerializer,OrderDetailSuccessResponseSerializer,OrderCancelSuccessResponseSerializer,OrderItemCancelSuccessResponseSerializer,OrderReturnSuccessResponseSerializer,OrderItemReturnSuccessResponseSerializer
 
 # Create your views here.
 
@@ -393,7 +393,8 @@ class OrderReturnAPIView(GenericAPIView):
     serializer_class = orders_serializers.OrderReturnSerializer
     lookup_field = "order_id"
 
-    @swagger_auto_schema(tags=["Order"], request_body=None, responses={500 : ErrorResponseSerializer,
+    @swagger_auto_schema(tags=["Order"], request_body=None, responses={200 : OrderReturnSuccessResponseSerializer,
+                                                                       500 : ErrorResponseSerializer,
                                                                        400 : ErrorResponseSerializer,
                                                                        404 : ErrorResponseSerializer
                                                                       }
@@ -432,7 +433,8 @@ class OrderItemReturnAPIView(GenericAPIView):
     serializer_class = orders_serializers.OrderItemReturnSerializer
     lookup_field = "id"
 
-    @swagger_auto_schema(tags=["Order"], request_body=None, responses={400 : ErrorResponseSerializer,
+    @swagger_auto_schema(tags=["Order"], request_body=None, responses={200 : OrderItemReturnSuccessResponseSerializer,
+                                                                       400 : ErrorResponseSerializer,
                                                                        404 : ErrorResponseSerializer,
                                                                        500 : ErrorResponseSerializer
                                                                       }

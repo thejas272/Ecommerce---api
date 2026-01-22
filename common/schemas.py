@@ -426,6 +426,7 @@ class OrderDetailSuccessResponseSerializer(SuccessResponseSerializer):
 
 
 
+
 class OrderCancelSuccessResponseSerializer(SuccessResponseSerializer):
     data = orders_serializers.OrderCancelSerializer()
 
@@ -433,6 +434,23 @@ class OrderCancelSuccessResponseSerializer(SuccessResponseSerializer):
 class OrderItemCancelSuccessResponseSerializer(SuccessResponseSerializer):
     data = orders_serializers.OrderItemCancelSerializer()
 
+
+
+
+
+class OrderReturnSuccessResponseSerializer(SuccessResponseSerializer):
+    data = orders_serializers.OrderReturnSerializer()
+
+
+class OrderItemReturnSuccessResponseSerializer(SuccessResponseSerializer):
+    data = orders_serializers.OrderItemReturnSerializer()
+
+
+
+
+
+class MarkOrderItemReturnSuccessResponseSerializer(SuccessResponseSerializer):
+    data = accounts_serializers.AdminMarkOrderItemReturnedSerializer()
 
 
 

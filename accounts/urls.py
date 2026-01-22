@@ -23,8 +23,9 @@ urlpatterns = [
 
     path('admin/users/<int:id>/',views.UserDetailAPIView.as_view(), name="admin-user-detail"),
     path('admin/audit-logs/<int:id>/', views.AdminAuditLogDetailAPIView.as_view(), name="admin-audit-log-detail"),
-    path('admin/orders/<str:id>/', views.AdminOrderDetailAPIView.as_view(), name="admin-order-detail"),
+    path('admin/orders/<str:order_id>/', views.AdminOrderDetailAPIView.as_view(), name="admin-order-detail"),
 
     path('admin/orders/<str:order_id>/payment', views.AdminOrderPaymentHistoryAPIView.as_view(), name="admin-order-payment-history"),
+    path('admin/orders/item/<int:id>/mark-returned/', views.MarkOrderItemReturnedApiView.as_view(), name="mark-order-item-returned"),
     
 ]

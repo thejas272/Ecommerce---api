@@ -19,7 +19,7 @@ from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 from common.helpers import success_response,error_response,normalize_validation_errors
 from orders import models as orders_models
 from payments import models as payments_model
-from common.schemas import RegisterSuccessResponseSerializer,LoginSuccessResponseSerializer,ErrorResponseSerializer,SuccessResponseSerializer,RefreshTokenSuccessSerializer,ProfileSuccessResponseSerializer,UpdateProfileSuccessResponseSerializer,CreateAddressSuccessResponse,AddressListSuccessResponseSerializer,AddressDeleteSuccessResponse,UpdateAddressSuccessResponseSerializer,AddressDetailSuccessResponse,UserListSuccessResponseSerializer, UserDetailSuccessResponseSerializer,AuditLogListSuccessResponseSerializer,AuditLogDetailSuccessResponseSerializer,OrderListSuccessResponseSerializer,OrderDetailSuccessResponseSerializer,OrderUpdateSuccessResponseSerializer,AdminOrderPaymentHistorySuccessResponseSerializer
+from common.schemas import RegisterSuccessResponseSerializer,LoginSuccessResponseSerializer,ErrorResponseSerializer,SuccessResponseSerializer,RefreshTokenSuccessSerializer,ProfileSuccessResponseSerializer,UpdateProfileSuccessResponseSerializer,CreateAddressSuccessResponse,AddressListSuccessResponseSerializer,AddressDeleteSuccessResponse,UpdateAddressSuccessResponseSerializer,AddressDetailSuccessResponse,UserListSuccessResponseSerializer, UserDetailSuccessResponseSerializer,AuditLogListSuccessResponseSerializer,AuditLogDetailSuccessResponseSerializer,OrderListSuccessResponseSerializer,OrderDetailSuccessResponseSerializer,OrderUpdateSuccessResponseSerializer,AdminOrderPaymentHistorySuccessResponseSerializer,MarkOrderItemReturnSuccessResponseSerializer
 # Create your views here.
 
 
@@ -709,3 +709,45 @@ class AdminOrderPaymentHistoryAPIView(GenericAPIView):
                                 data    =  paginated_data,
                                 status_code = status.HTTP_200_OK
                                )
+
+
+
+
+class MarkOrderItemReturnedApiView(GenericAPIView):
+    permission_classes = [IsAuthenticated,IsAdminUser]
+    serializer_class = serializers.AdminMarkOrderItemReturnedSerializer
+    lookup_field = "id"
+
+    @swagger_auto_schema(tags=["Admin"], request_body=None, responses={200 : MarkOrderItemReturnSuccessResponseSerializer,
+                                                                       500 : ErrorResponseSerializer,
+                                                                       404 : ErrorResponseSerializer,
+                                                                       400 : ErrorResponseSerializer
+                                                                      }
+                        )
+    def patch(self,request,id):
+        try:
+            order_item = orders_models.OrderItemModel.objects.get(id=id)
+        except orders_models.OrderItemModel.DoesNotExist:
+            return error_response(message = "Invalid order item id.",
+                                  data    = {"order_item_id":id},
+                                  status_code = status.HTTP_404_NOT_FOUND
+                                 )
+        
+        serializer = self.serializer_class(instance=order_item, data={})
+
+        try:
+            if serializer.is_valid():
+                serializer.save()
+                return success_response(message = "Order item maerked as Returned.",
+                                        data    = serializer.data,
+                                        status_code = status.HTTP_200_OK
+                                    )
+            
+        except drf_serializers.ValidationError as e:
+            message,data = normalize_validation_errors(e.detail)
+
+            return error_response(message = message,
+                                  data    = data,
+                                  status_code = status.HTTP_400_BAD_REQUEST
+                                 )
+
