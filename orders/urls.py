@@ -8,7 +8,7 @@ urlpatterns = [
     path('<str:order_id>/',views.OrderDetailAPIView.as_view(), name="order-detail"),
 
     path('<str:order_id>/cancel/',views.OrderCancelAPIView.as_view(), name="order-cancel"),
-    path('item/<int:id>/cancel', views.OrderItemCancelAPIView.as_view(), name="order-item-cancel"),
+    path('item/<int:id>/cancel/', views.OrderItemCancelAPIView.as_view(), name="order-item-cancel"),
     
     path('<str:order_id>/return/', views.OrderReturnAPIView.as_view(), name="order-return"),
     path('item/<int:id>/return/', views.OrderItemReturnAPIView.as_view(), name="order-item-return"),

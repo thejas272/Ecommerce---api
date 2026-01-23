@@ -290,9 +290,9 @@ class OrderDetailAPIView(GenericAPIView):
                                                     500 : ErrorResponseSerializer
                                                    }
                         )
-    def get(self,request,id):
+    def get(self,request,order_id):
         try:
-            order_instance = orders_models.OrderModel.objects.filter(user=request.user).prefetch_related('items').get(order_id=id)
+            order_instance = orders_models.OrderModel.objects.filter(user=request.user).prefetch_related('items').get(order_id=order_id)
         except orders_models.OrderModel.DoesNotExist:
             return error_response(message = "Invalid order ID.",
                                   data    = {"order_id":id},
@@ -321,9 +321,9 @@ class OrderCancelAPIView(GenericAPIView):
                                                                        500 : ErrorResponseSerializer
                                                                       }
                         )
-    def patch(self,request,id):
+    def patch(self,request,order_id):
         try:
-            order_instance = orders_models.OrderModel.objects.get(order_id=id,user=request.user)
+            order_instance = orders_models.OrderModel.objects.get(order_id=order_id,user=request.user)
         except orders_models.OrderModel.DoesNotExist:
             return error_response(message = "Invalid order id.",
                                   data={"order_id":id},

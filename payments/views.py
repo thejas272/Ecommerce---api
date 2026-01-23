@@ -17,6 +17,7 @@ from rest_framework.response import Response
 from django.db import transaction
 from django.utils import timezone
 from datetime import timedelta
+from decimal import Decimal,ROUND_HALF_UP
 import logging
 logger = logging.getLogger("payments")
 
@@ -60,12 +61,18 @@ class PaymentInitiateAPIView(GenericAPIView):
                                  )
         
 
+        if order_instance.status == "PAID":
+            return error_response(message = "Order already paid.",
+                                  data    = {"order_id":order_id},
+                                  status_code = status.HTTP_400_BAD_REQUEST
+                                 )
+
 
 
         payment_instance = payments_model.PaymentModel.objects.filter(order=order_instance,method="RAZORPAY",status="PENDING").first()
 
         if not payment_instance:
-            return error_response(message = "Payment not eligible for initiation.",
+            return error_response(message = "Payment not eligible.",
                                   data    = {"order_id":order_id},
                                   status_code = status.HTTP_400_BAD_REQUEST
                                  )
@@ -85,12 +92,13 @@ class PaymentInitiateAPIView(GenericAPIView):
 
 
         try:
-        
-            razorpay_order = razorpay_client.order.create({"amount":int(payment_instance.amount*100),
+            razorpay_amount = int((payment_instance.amount * Decimal(100)).quantize(Decimal("1"),rounding=ROUND_HALF_UP))
+
+            razorpay_order = razorpay_client.order.create({"amount":razorpay_amount,
                                                            "currency":"INR",
                                                            "receipt":order_id
-                                                          }
-                                                         )
+                                                         })
+            
             logger.info("Razorpay order created",extra={"order_id":order_id,
                                                         "razorpay_order_id":razorpay_order["id"]
                                                        }
@@ -173,7 +181,7 @@ class PaymentWebhookAPIView(GenericAPIView):
             with transaction.atomic():
                 payment_instance = payments_model.PaymentModel.objects.select_for_update().select_related('order').get(provider_order_id=razorpay_order_id)
 
-                if payment_instance.status == "SUCCESS":
+                if payment_instance.status in ["SUCCESS","FAILED"]:
                     logger.info("Reattempt by webhook", extra={"razorpay_order_id":razorpay_order_id,
                                                                "razorpay_payment_id":razorpay_payment_id
                                                               }
@@ -184,12 +192,16 @@ class PaymentWebhookAPIView(GenericAPIView):
 
                 if payment_status == "captured":
 
-                    payment_instance.status="SUCCESS"
+                    
+                    payment_instance.status = "SUCCESS"
                     payment_instance.provider_payment_id = razorpay_payment_id
-                    payment_instance.save()
+                    payment_instance.save(update_fields=["status","provider_payment_id"])
 
-                    payment_instance.order.status = "PAID"
-                    payment_instance.order.save()
+                    order = payment_instance.order
+                    order.status = "PAID"
+                    order.save(update_fields=["status"])
+
+                    order.items.filter(status="PENDING").update(status="PAID")
 
                     logger.info("Payment captured successfuly", extra={"razorpay_order_id":razorpay_order_id,
                                                                         "razorpay_payment_id":razorpay_payment_id
@@ -200,7 +212,8 @@ class PaymentWebhookAPIView(GenericAPIView):
 
                     payment_instance.status = "FAILED"
                     payment_instance.provider_payment_id = razorpay_payment_id
-                    payment_instance.save()
+
+                    payment_instance.save(update_fields=["status","provider_payment_id"])
 
                     logger.info("Payment failed", extra={"razorpay_order_id":razorpay_order_id,
                                                          "razorpay_payment_id":razorpay_payment_id
@@ -290,7 +303,9 @@ class PaymentRetryAPIView(GenericAPIView):
                    )
 
         try:
-            razorpay_order = razorpay_client.order.create(amount  = int(order_instance.grand_total * 100),
+            razorpay_amount = int((prev_payment_instance.amount * Decimal(100)).quantize(Decimal("1"),rounding=ROUND_HALF_UP))
+
+            razorpay_order = razorpay_client.order.create(amount  = razorpay_amount,
                                                           receipt = order_id,
                                                           currency = "INR"
                                                          )
