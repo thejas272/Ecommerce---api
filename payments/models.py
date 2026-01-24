@@ -34,13 +34,14 @@ class PaymentModel(models.Model):
 
 
 
+
 class RefundModel(models.Model):
     REFUND_STATUS_CHOICES = [("PENDING","Pending"),
                              ("SUCCESS","Success"),
                              ("FAILED","Failed")
                             ]
+    
     order      = models.ForeignKey(orders_models.OrderModel, related_name="order_Refunds", on_delete=models.PROTECT, null=False,blank=False)
-    order_item = models.ForeignKey(orders_models.OrderItemModel, related_name="item_refunds", on_delete=models.PROTECT, null=False,blank=False)
     payment    = models.ForeignKey(PaymentModel, related_name="payment_refunds", on_delete=models.PROTECT, null=False,blank=False)
 
     amount    = models.DecimalField(max_digits=10, decimal_places=2, null=False,blank=False)
@@ -52,19 +53,26 @@ class RefundModel(models.Model):
 
     provider_refund_id = models.CharField(max_length=255, null=True,blank=True)
 
-
-
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
 
-
-    class Meta:
-        constraints = [models.UniqueConstraint(fields=["order_item"],
-                                              name="unique_refund_per_order_item"
-                                              ),
-                      ]
-        
-
     def __str__(self):
-        return f"{self.order.order_id} - {self.order_item.id} - {self.status}"
+        return f"{self.order.order_id} - {self.status}"
+    
+
+
+
+class RefundItemModel(models.Model):
+    refund = models.ForeignKey(RefundModel, on_delete=models.CASCADE, related_name="refund_items", null=False, blank=False)
+    item   = models.ForeignKey(orders_models.OrderItemModel, on_delete=models.PROTECT, related_name="item_refunds", null=False, blank=False)
+    
+    amount = models.DecimalField(max_digits=10, decimal_places=2, null=False, blank=False)
+    status = models.CharField(max_length=50, choices=RefundModel.REFUND_STATUS_CHOICES, null=False, blank=False)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    
+    def __str__(self):
+        return f"{self.item.name} - {self.status}"

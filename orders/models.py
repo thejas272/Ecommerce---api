@@ -62,7 +62,9 @@ class OrderModel(models.Model):
 
 class OrderItemModel(models.Model):
 
-    ORDER_ITEM_STATUS_CHOICES = {("PENDING","Pending"),
+    BLOCKED_STATUSES_PAYMENT = ["PAID","SHIPPED","DELIVERED","CANCELLED","RETURN_REQUESTED","RETURNED","REFUNDED"]
+
+    ORDER_ITEM_STATUS_CHOICES = [("PENDING","Pending"),
                                  ("PAID","Paid"),
                                  ("CONFIRMED","Confirmed"),
                                  ("SHIPPED","Shipped"),
@@ -71,7 +73,7 @@ class OrderItemModel(models.Model):
                                  ("RETURN_REQUESTED","Return Requested"),
                                  ("RETURNED","Returned"),
                                  ("REFUNDED","Refunded")
-                                }
+                                ]
     
     order   = models.ForeignKey(OrderModel, related_name="items", on_delete=models.CASCADE, null=False, blank=False)
     product = models.ForeignKey(product_models.ProductModel, related_name="order_items", on_delete=models.PROTECT, null=False, blank=False)
