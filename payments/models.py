@@ -1,5 +1,6 @@
 from django.db import models
 from orders import models as orders_models
+from django.db.models import Q
 # Create your models here.
 
 
@@ -24,8 +25,17 @@ class PaymentModel(models.Model):
     provider_order_id   = models.CharField(max_length=255, null=True, blank=True)
     provider_payment_id = models.CharField(max_length=255, null=True, blank=True)
 
+    processing = models.BooleanField(null=False, default=False)  # to prevent race conditions
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields = ["order"],
+                                               name = "one_processing_payment_per_order",
+                                               condition = Q(processing=True)
+                                              )
+                      ]
 
 
     def __str__(self):
