@@ -25,17 +25,10 @@ class PaymentModel(models.Model):
     provider_order_id   = models.CharField(max_length=255, null=True, blank=True)
     provider_payment_id = models.CharField(max_length=255, null=True, blank=True)
 
-    processing = models.BooleanField(null=False, default=False)  # to prevent race conditions
+    
+    processing_started_at = models.DateTimeField(null=True)  # to prevent race conditions
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
-
-    class Meta:
-        constraints = [models.UniqueConstraint(fields = ["order"],
-                                               name = "one_processing_payment_per_order",
-                                               condition = Q(processing=True)
-                                              )
-                      ]
 
 
     def __str__(self):

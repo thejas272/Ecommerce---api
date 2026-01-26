@@ -73,38 +73,51 @@ class PaymentInitiateAPIView(GenericAPIView):
                                   data    = {"order_id":order_id},
                                   status_code =  status.HTTP_409_CONFLICT
                                  )
+        
+        try:
+            with transaction.atomic():
 
-        with transaction.atomic():
-
-            payment_instance = payments_model.PaymentModel.objects.select_for_update().filter(order=order_instance,method="RAZORPAY",status="PENDING").first()
-            
-            if not payment_instance:
-                raise drf_serializers.ValidationError({"error_message":"Payment not eligible.",
-                                                       "data":{"order_id":order_id}
-                                                     })
-            
-
-            razorpay_amount = int((payment_instance.amount * Decimal(100)).quantize(Decimal("1"),rounding=ROUND_HALF_UP))
-            
-            if payment_instance.provider_order_id:
-                return success_response(message = "payment was already initiated.",
-                                        data    = {"razorpay_order_id":payment_instance.provider_order_id,
-                                                   "razorpay_key": settings.RAZORPAY_KEY_ID,
-                                                   "order_id":order_id,
-                                                   "amount": razorpay_amount,
-                                                   "currency":"INR"
-                                                  },
-                                        status_code = status.HTTP_200_OK
-                                    )
-            
-
-            if payment_instance.processing:
-                raise drf_serializers.ValidationError({"error_message":"Payment already being processed.",
-                                                       "data":{"order_id":order_id}
-                                                     })
+                payment_instance = payments_model.PaymentModel.objects.select_for_update().filter(order=order_instance,method="RAZORPAY",status="PENDING").first()
                 
-            payment_instance.processing = True
-            payment_instance.save(update_fields=["processing"])
+                if not payment_instance:
+                    raise drf_serializers.ValidationError({"error_message":"Payment not eligible.",
+                                                           "data":{"order_id":order_id}
+                                                         })
+                
+
+                razorpay_amount = int((payment_instance.amount * Decimal(100)).quantize(Decimal("1"),rounding=ROUND_HALF_UP))
+                
+                if payment_instance.provider_order_id:
+                    return success_response(message = "payment was already initiated.",
+                                            data    = {"razorpay_order_id":payment_instance.provider_order_id,
+                                                       "razorpay_key": settings.RAZORPAY_KEY_ID,
+                                                       "order_id":order_id,
+                                                       "amount": razorpay_amount,
+                                                       "currency":"INR"
+                                                      },
+                                            status_code = status.HTTP_200_OK
+                                        )
+                
+
+                payment_processing_timeout = timezone.now() - timedelta(minutes=2)
+
+                if payment_instance.processing_started_at:
+                    if payment_instance.processing_started_at >= payment_processing_timeout:
+                        raise drf_serializers.ValidationError({"error_message":"Payment is already being processed.",
+                                                               "data":{"order_id":order_id}
+                                                             })
+
+                payment_instance.processing_started_at = timezone.now()
+                payment_instance.save(update_fields=["processing_started_at"])
+
+        except drf_serializers.ValidationError as e:
+            message,data = normalize_validation_errors(e.detail)
+
+            return error_response(message = message,
+                                  data    = data,
+                                  status_code = status.HTTP_400_BAD_REQUEST
+                                 )
+        
             
 
 
@@ -124,8 +137,8 @@ class PaymentInitiateAPIView(GenericAPIView):
         except razorpay.errors.RazorpayError:
             with transaction.atomic():
                 payment_instance = payments_model.PaymentModel.objects.select_for_update().get(id=payment_instance.id)
-                payment_instance.processing = False
-                payment_instance.save(update_fields=["processing"])
+                payment_instance.processing_started_at = None
+                payment_instance.save(update_fields=["processing_started_at"])
 
             logger.warning("Razorpay failed to respond for order creation",extra={"order_id":order_id})
 
@@ -139,8 +152,8 @@ class PaymentInitiateAPIView(GenericAPIView):
             payment_instance = payments_model.PaymentModel.objects.select_for_update().get(id=payment_instance.id)
             
             payment_instance.provider_order_id = razorpay_order["id"]
-            payment_instance.processing = False
-            payment_instance.save(update_fields=["provider_order_id","processing"])
+            payment_instance.processing_started_at = None 
+            payment_instance.save(update_fields=["provider_order_id","processing_started_at"])
 
 
         return success_response(message = "Payment initiation successful",
@@ -325,13 +338,17 @@ class PaymentRetryAPIView(GenericAPIView):
                                                              })
                     
                 
-                if prev_payment_instance.processing:
-                    raise drf_serializers.ValidationError({"error_message":"Payment is being processed.",
-                                                           "data":{"order_id":order_id}
-                                                         })
+                payment_processing_timeout = timezone.now() - timedelta(minutes=2)
 
-                prev_payment_instance.processing = True
-                prev_payment_instance.save(update_fields=["processing"])
+                if prev_payment_instance.processing_started_at:
+                    if prev_payment_instance.processing_started_at >= payment_processing_timeout:
+                        raise drf_serializers.ValidationError({"error_message":"Payment is being processed.",
+                                                               "data":{"order_id":order_id}
+                                                             })
+
+
+                prev_payment_instance.processing_started_at = timezone.now()
+                prev_payment_instance.save(update_fields=["processing_started_at"])
                     
                     
         except drf_serializers.ValidationError as e:
@@ -358,11 +375,12 @@ class PaymentRetryAPIView(GenericAPIView):
                                                           receipt = order_id,
                                                           currency = "INR"
                                                          )
+            
         except razorpay.errors.RazorpayError:
             with transaction.atomic():
                 prev_payment_instance = payments_model.PaymentModel.objects.select_for_update().get(id=prev_payment_instance.id)
-                prev_payment_instance.processing = False
-                prev_payment_instance.save(update_fields=["processing"])
+                prev_payment_instance.processing_started_at = None 
+                prev_payment_instance.save(update_fields=["processing_started_at"])
 
             logger.warning("Razorpay failed to respond to payment reattempt.",extra={"order_id":order_id})
 
@@ -382,8 +400,8 @@ class PaymentRetryAPIView(GenericAPIView):
                                                        provider_order_id = razorpay_order["id"]
                                                       )
             prev_payment_instance.status = "FAILED"
-            prev_payment_instance.processing = False
-            prev_payment_instance.save(update_fields=["status","processing"])
+            prev_payment_instance.processing_started_at = None
+            prev_payment_instance.save(update_fields=["status","processing_started_at"])
 
 
         logger.info("Payment retry initiated",extra={"order_id":order_id,
