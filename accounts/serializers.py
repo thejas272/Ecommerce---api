@@ -471,59 +471,59 @@ class AdminOrderDetailSerializer(serializers.ModelSerializer):
 
 
 
-class AdminOrderUpdateSerializer(serializers.ModelSerializer):
-    status = serializers.ChoiceField(required=True, choices=orders_models.OrderModel.STATUS_CHOICES)
+#class AdminOrderUpdateSerializer(serializers.ModelSerializer):
+#    status = serializers.ChoiceField(required=True, choices=orders_models.OrderModel.STATUS_CHOICES)
 
-    class Meta:
-        model = orders_models.OrderModel
-        fields = ["status"]
+#    class Meta:
+#        model = orders_models.OrderModel
+#        fields = ["status"]
 
-    def validate(self, attrs):               
-        status = attrs["status"]
+#    def validate(self, attrs):               
+#        status = attrs["status"]
 
-        current_status = self.instance.status
+#        current_status = self.instance.status
 
-        order_status_flow = orders_models.OrderModel.ORDER_STATUS_FLOW
+#        order_status_flow = orders_models.OrderModel.ORDER_STATUS_FLOW
 
-        if status == current_status:
-            raise serializers.ValidationError({"error_message":"Order is already in this status.",
-                                               "data":{"current_status":current_status,
-                                                       "new_status":status
-                                                      }
-                                             })
+#        if status == current_status:
+#            raise serializers.ValidationError({"error_message":"Order is already in this status.",
+#                                               "data":{"current_status":current_status,
+#                                                       "new_status":status
+#                                                      }
+#                                             })
         
-        allowed_next_stages = order_status_flow.get(current_status,[])
+#        allowed_next_stages = order_status_flow.get(current_status,[])
 
-        if status not in allowed_next_stages:
-            raise serializers.ValidationError({"error_message":"Invalid status update request, please check and try again.",
-                                               "data":{"current_status":current_status,
-                                                       "new_status":status,
-                                                       "allowed_next":allowed_next_stages
-                                                      }
-                                             })
+#        if status not in allowed_next_stages:
+#            raise serializers.ValidationError({"error_message":"Invalid status update request, please check and try again.",
+#                                               "data":{"current_status":current_status,
+#                                                       "new_status":status,
+#                                                       "allowed_next":allowed_next_stages
+#                                                      }
+#                                             })
 
-        return attrs
+#        return attrs
     
 
-    def update(self, instance, validated_data):
+#    def update(self, instance, validated_data):
     
-        request = self.context.get("request")
-        if not request or not request.user:
-            raise serializers.ValidationError({"error_message":"Authentication required for this operation."}) 
+#        request = self.context.get("request")
+#        if not request or not request.user:
+#            raise serializers.ValidationError({"error_message":"Authentication required for this operation."}) 
 
-        action = "ORDER_STATUS_UPDATE"
-        message = f"Order status of {instance.order_id} changed from {instance.status} -> {validated_data['status']} by {request.user.username}"
-        changes = {"status":{"old":str(instance.status),
-                             "new":str(validated_data["status"])
-                            }
-                  }
+#        action = "ORDER_STATUS_UPDATE"
+#        message = f"Order status of {instance.order_id} changed from {instance.status} -> {validated_data['status']} by {request.user.username}"
+#        changes = {"status":{"old":str(instance.status),
+#                            "new":str(validated_data["status"])
+#                           }
+#                  }
 
         
-        with transaction.atomic():
-            order = super().update(instance, validated_data)
-            create_audit_log(user=request.user,action=action,message=message,instance=order,changes=changes)
+#        with transaction.atomic():
+#            order = super().update(instance, validated_data)
+#            create_audit_log(user=request.user,action=action,message=message,instance=order,changes=changes)
 
-            return order
+#            return order
         
 
 
@@ -538,37 +538,175 @@ class AdminOrderPaymentHistorySerializer(serializers.ModelSerializer):
 
 
 
-class AdminMarkOrderItemReturnedSerializer(serializers.ModelSerializer):
-    order_id = serializers.CharField(source="order.order_id", read_only=True)
 
-    class Meta:
-        model = orders_models.OrderItemModel
-        fields = ["id","order_id","status"]
-        read_only_fields = ["id","order_id","status"]
+#class AdminMarkOrderItemReturnedSerializer(serializers.ModelSerializer):
+    #order_id = serializers.CharField(source="order.order_id", read_only=True)
 
-    def update(self, instance, validated_data):
+    #class Meta:
+        #model = orders_models.OrderItemModel
+        #fields = ["id","order_id","status"]
+        #read_only_fields = ["id","order_id","status"]
+
+    #def update(self, instance, validated_data):
         
-        if instance.status != "RETURN_REQUESTED": 
-            raise serializers.ValidationError({"error_message":"Order item return request not recieved.",
-                                               "data":{"order_item_id":instance.id,
-                                                       "order_id":instance.order.order_id,
-                                                       "status":instance.status
-                                                      }
-                                             })
-        order = instance.order
+        #if instance.status != "RETURN_REQUESTED": 
+            #raise serializers.ValidationError({"error_message":"Order item return request not recieved.",
+                                               #"data":{"order_item_id":instance.id,
+                                                       #"order_id":instance.order.order_id,
+                                                       #"status":instance.status
+                                                      #}
+                                             #})
+        #order = instance.order
 
-        with transaction.atomic():
-            order = orders_models.OrderModel.objects.select_for_update().get(id=order.id)
+        #with transaction.atomic():
+            #order = orders_models.OrderModel.objects.select_for_update().get(id=order.id)
 
-            instance.status = "RETURNED"
-            instance.save(update_fields=["status"])
+            #instance.status = "RETURNED"
+            #instance.save(update_fields=["status"])
 
-            order_items = order.items.all()
-            existing_items = order_items.exclude(status="RETURNED")
+            #order_items = order.items.all()
+            #existing_items = order_items.exclude(status="RETURNED")
 
-            if not existing_items.exists():
-                order.status = "RETURNED"
-                order.save(update_fields=["status"])
+            #if not existing_items.exists():
+                #order.status = "RETURNED"
+                #order.save(update_fields=["status"])
 
 
-        return instance
+        #return instance
+
+
+
+
+#class OrderRefundInitiateSerializer(serializers.Serializer):
+#    order_id      = serializers.CharField(required=False)
+#    order_item_id = serializers.IntegerField(required=False)
+#    reason        = serializers.CharField(required=True)
+#    refund_shipping_fee = serializers.BooleanField(required=True)
+
+
+#    def validate(self, attrs):
+#        order_id = attrs.get("order_id")
+#        order_item_id = attrs.get("order_item_id")
+#        refund_shipping_fee = attrs.get("refund_shipping_fee")
+
+
+#       if not order_id and not order_item_id:
+#            raise serializers.ValidationError({"error_message":"Provide either order_id for order cancellation or order_item_id for item cancellation.",
+#                                               "data":{"order_id":"null",
+#                                                       "order_item_id":"null"
+#                                                      }
+#                                             })
+
+#        if order_id and order_item_id:
+#            raise serializers.ValidationError({"error_message":"Cannot accept both order_id and order_item_id.",
+#                                               "data":{"order_id":order_id,
+#                                                       "order_item_id":order_item_id
+#                                                      }
+#                                             })
+
+
+
+#        if order_id:
+#            try:
+#                order_instance = orders_models.OrderModel.objects.prefetch_related("items").get(order_id=order_id)
+#            except orders_models.OrderModel.DoesNotExist:
+#                raise serializers.ValidationError({"error_message":"Invalid order_id",
+#                                                   "data":{"order_id":order_id}
+#                                                 })
+            
+#            eligible_items = order_instance.items.filter(status__in=["CANCELLED","RETURNED"]).exclude(item_refunds__status__in=["PENDING","SUCCESS"])
+            
+#            if not eligible_items.exists():
+#                raise serializers.ValidationError({"error_message":"No items in this order available for refund.",
+#                                                   "data":{"order_id":order_instance.order_id}
+#                                                 })
+            
+
+#            attrs["order_instance"] = order_instance
+#            attrs["refund_scope"]  = "order"
+
+#            attrs["payment_instance"] = order_instance.payments.all().filter(status="SUCCESS").order_by('-created_at').first()
+
+#            if not attrs["payment_instance"]:
+#                raise serializers.ValidationError({"error_message":"Payment info not found.",
+#                                                   "data":{"order_id":order_instance.order_id}
+#                                                 })
+
+
+#            attrs["amount"] = sum(item.total_price for item in eligible_items)            
+
+#            if order_instance.shipping_fee != 0.0:
+#                if refund_shipping_fee:
+#                    attrs["amount"] += order_instance.shipping_fee 
+            
+
+
+#            if attrs["amount"] > attrs["payment_instance"].amount:
+#                raise serializers.ValidationError({"error_message":"Refund exceeds paid amount.",
+#                                                  "data":{"refund_amount":attrs["amount"],
+#                                                          "paid_amount"  :attrs["payment_instance"].amount
+#                                                         }
+#                                                 })
+            
+
+#            attrs["order_item_instance"] = list(eligible_items)
+
+
+
+#        elif order_item_id:
+#            try:
+#                order_item_instance = orders_models.OrderItemModel.objects.prefetch_related("item_refunds").get(id=order_item_id)
+#            except orders_models.OrderItemModel.DoesNotExist:
+#                raise serializers.ValidationError({"error_message":"Invalid order_item_id",
+#                                                   "data":{"order_item_id":order_item_id}
+#                                                 })
+            
+            
+#            if order_item_instance.status not in ["CANCELLED","RETURNED"]:
+#                raise serializers.ValidationError({"error_message":"Order item refund cannot be initiated.",
+#                                                   "data":{"order_item_id":order_item_id,
+#                                                           "order_id":order_item_instance.order.order_id,
+#                                                           "order_item_status":order_item_instance.status
+#                                                          }
+#                                                 })
+#            
+#            if order_item_instance.item_refunds.filter(status__in=["PENDING","SUCCESS"]).exists():
+#                raise serializers.ValidationError({"error_message":"Refund request already submitted.",
+#                                                   "data":{"order_item_id":order_item_id,
+#                                                           "order_id":order_item_instance.order.order_id
+#                                                          }
+#                                                  })
+            
+            
+#            attrs["order_instance"] = order_item_instance.order
+#            attrs["refund_scope"]  = "order_item"
+#            attrs["amount"] = order_item_instance.total_price
+
+
+#            if attrs["order_instance"].items.count() == 1 and attrs["order_instance"].shipping_fee != 0.0:
+#                if refund_shipping_fee:
+#                    attrs["amount"] += attrs["order_instance"].shipping_fee
+
+
+
+#            attrs["payment_instance"] = attrs["order_instance"].payments.all().filter(status="SUCCESS").order_by('-created_at').first()
+
+#            if not attrs["payment_instance"]:
+#                raise serializers.ValidationError({"error_message":"Payment info not found.",
+#                                                   "data":{"order_id":attrs["order_instance"].order_id,
+#                                                           "order_item_id":order_item_instance.id
+#                                                          }
+#                                                })
+            
+#            attrs["order_item_instance"] = [order_item_instance]
+            
+        
+
+#        if attrs["amount"] <= 0:
+#            raise serializers.ValidationError({"error_message":"Invalid amount.",
+#                                               "data":{"amount":attrs["amount"]}
+#                                             })
+        
+
+
+#        return attrs

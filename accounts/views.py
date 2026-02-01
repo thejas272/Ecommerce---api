@@ -19,7 +19,10 @@ from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 from common.helpers import success_response,error_response,normalize_validation_errors
 from orders import models as orders_models
 from payments import models as payments_model
-from common.schemas import RegisterSuccessResponseSerializer,LoginSuccessResponseSerializer,ErrorResponseSerializer,SuccessResponseSerializer,RefreshTokenSuccessSerializer,ProfileSuccessResponseSerializer,UpdateProfileSuccessResponseSerializer,CreateAddressSuccessResponse,AddressListSuccessResponseSerializer,AddressDeleteSuccessResponse,UpdateAddressSuccessResponseSerializer,AddressDetailSuccessResponse,UserListSuccessResponseSerializer, UserDetailSuccessResponseSerializer,AuditLogListSuccessResponseSerializer,AuditLogDetailSuccessResponseSerializer,OrderListSuccessResponseSerializer,OrderDetailSuccessResponseSerializer,OrderUpdateSuccessResponseSerializer,AdminOrderPaymentHistorySuccessResponseSerializer,MarkOrderItemReturnSuccessResponseSerializer
+from payments.razorpay import razorpay_client
+from django.db import transaction
+from decimal import Decimal,ROUND_HALF_UP
+from common.schemas import RegisterSuccessResponseSerializer,LoginSuccessResponseSerializer,ErrorResponseSerializer,SuccessResponseSerializer,RefreshTokenSuccessSerializer,ProfileSuccessResponseSerializer,UpdateProfileSuccessResponseSerializer,CreateAddressSuccessResponse,AddressListSuccessResponseSerializer,AddressDeleteSuccessResponse,UpdateAddressSuccessResponseSerializer,AddressDetailSuccessResponse,UserListSuccessResponseSerializer, UserDetailSuccessResponseSerializer,AuditLogListSuccessResponseSerializer,AuditLogDetailSuccessResponseSerializer,OrderListSuccessResponseSerializer,OrderDetailSuccessResponseSerializer,AdminOrderPaymentHistorySuccessResponseSerializer
 # Create your views here.
 
 
@@ -634,39 +637,39 @@ class AdminOrderDetailAPIView(GenericAPIView):
                                )
     
 
-    @swagger_auto_schema(tags=["Admin"], request_body=serializers.AdminOrderUpdateSerializer,
-                         responses = {200 : OrderUpdateSuccessResponseSerializer,
-                                      404 : ErrorResponseSerializer,
-                                      400 : ErrorResponseSerializer,
-                                      500 : ErrorResponseSerializer
-                                     }
-                        )
-    def patch(self,request,id):
-        try:
-            order_instance = self.queryset.get(order_id=id)
-        except orders_models.OrderModel.DoesNotExist:
-            return error_response(message = "Invalid order id.",
-                                  data    = {"order_id":id},
-                                  status_code = status.HTTP_404_NOT_FOUND
-                                 )
+#    @swagger_auto_schema(tags=["Admin"], request_body=serializers.AdminOrderUpdateSerializer,
+#                         responses = {#200 : OrderUpdateSuccessResponseSerializer,
+#                                      404 : ErrorResponseSerializer,
+#                                      400 : ErrorResponseSerializer,
+#                                      500 : ErrorResponseSerializer
+#                                     }
+#                        )
+#    def patch(self,request,id):
+#        try:
+#            order_instance = self.queryset.get(order_id=id)
+#        except orders_models.OrderModel.DoesNotExist:
+#            return error_response(message = "Invalid order id.",
+#                                  data    = {"order_id":id},
+#                                  status_code = status.HTTP_404_NOT_FOUND
+#                                 )
         
-        serializer = self.get_serializer(order_instance, data=request.data, context={"request":request})
-        try:
-            if serializer.is_valid(raise_exception=True):
-                serializer.save()
+#        serializer = self.get_serializer(order_instance, data=request.data, context={"request":request})
+#        try:
+#            if serializer.is_valid(raise_exception=True):
+#                serializer.save()
 
-                return success_response(message = "Order status change successful.",
-                                        data    = serializer.data,
-                                        status_code = status.HTTP_200_OK
-                                    )
+#                return success_response(message = "Order status change successful.",
+#                                        data    = serializer.data,
+#                                        status_code = status.HTTP_200_OK
+#                                    )
         
-        except drf_serializers.ValidationError as e:
-            message,data = normalize_validation_errors(e.detail)
+#        except drf_serializers.ValidationError as e:
+#            message,data = normalize_validation_errors(e.detail)
 
-            return error_response(message = message,
-                                  data    = data,
-                                  status_code = status.HTTP_400_BAD_REQUEST
-                                 )
+#            return error_response(message = message,
+#                                  data    = data,
+#                                  status_code = status.HTTP_400_BAD_REQUEST
+#                                 )
 
     
         
@@ -713,41 +716,131 @@ class AdminOrderPaymentHistoryAPIView(GenericAPIView):
 
 
 
-class MarkOrderItemReturnedApiView(GenericAPIView):
-    permission_classes = [IsAuthenticated,IsAdminUser]
-    serializer_class = serializers.AdminMarkOrderItemReturnedSerializer
-    lookup_field = "id"
+#class MarkOrderItemReturnedApiView(GenericAPIView):
 
-    @swagger_auto_schema(tags=["Admin"], request_body=None, responses={200 : MarkOrderItemReturnSuccessResponseSerializer,
-                                                                       500 : ErrorResponseSerializer,
-                                                                       404 : ErrorResponseSerializer,
-                                                                       400 : ErrorResponseSerializer
-                                                                      }
-                        )
-    def patch(self,request,id):
-        try:
-            order_item = orders_models.OrderItemModel.objects.get(id=id)
-        except orders_models.OrderItemModel.DoesNotExist:
-            return error_response(message = "Invalid order item id.",
-                                  data    = {"order_item_id":id},
-                                  status_code = status.HTTP_404_NOT_FOUND
-                                 )
-        
-        serializer = self.serializer_class(instance=order_item, data={})
+#    permission_classes = [IsAuthenticated,IsAdminUser]
+#    serializer_class = serializers.AdminMarkOrderItemReturnedSerializer
+#   lookup_field = "id"
 
-        try:
-            if serializer.is_valid():
-                serializer.save()
-                return success_response(message = "Order item maerked as Returned.",
-                                        data    = serializer.data,
-                                        status_code = status.HTTP_200_OK
-                                    )
+#    @swagger_auto_schema(tags=["Admin"], request_body=None, responses={200 : MarkOrderItemReturnSuccessResponseSerializer,
+#                                                                       500 : ErrorResponseSerializer,
+#                                                                       404 : ErrorResponseSerializer,
+#                                                                       400 : ErrorResponseSerializer
+#                                                                      }
+#                        )
+#    def patch(self,request,id):
+#        try:
+#            order_item = orders_models.OrderItemModel.objects.get(id=id)
+#        except orders_models.OrderItemModel.DoesNotExist:
+#            return error_response(message = "Invalid order item id.",
+#                                 data    = {"order_item_id":id},
+#                                  status_code = status.HTTP_404_NOT_FOUND
+#                                 )
+#        
+#       serializer = self.serializer_class(instance=order_item, data={})
+
+#        try:
+#            if serializer.is_valid():
+#                serializer.save()
+#                return success_response(message = "Order item maerked as Returned.",
+#                                        data    = serializer.data,
+#                                        status_code = status.HTTP_200_OK
+#                                    )
             
-        except drf_serializers.ValidationError as e:
-            message,data = normalize_validation_errors(e.detail)
+#        except drf_serializers.ValidationError as e:
+#            message,data = normalize_validation_errors(e.detail)
+#
+#            return error_response(message = message,
+#                                  data    = data,
+#                                  status_code = status.HTTP_400_BAD_REQUEST
+#                                 )
+#
 
-            return error_response(message = message,
-                                  data    = data,
-                                  status_code = status.HTTP_400_BAD_REQUEST
-                                 )
 
+
+#class RefundInitiateAPIView(GenericAPIView):
+#    permission_classes = [IsAuthenticated,DjangoModelPermissions,IsAdminUser]
+#    serializer_class = serializers.OrderRefundInitiateSerializer
+#    queryset = payments_model.RefundModel.objects.all()
+
+
+#    @swagger_auto_schema(tags=["Admin"], request_body=serializers.OrderRefundInitiateSerializer)
+#    def post(self,request):
+#        serializer = self.serializer_class(data=request.data)
+
+#        try:
+#            if serializer.is_valid(raise_exception=True):
+
+
+#                order_instance      = serializer.validated_data["order_instance"]
+#                order_items         = serializer.validated_data["order_item_instance"]
+#                payment_instance    = serializer.validated_data["payment_instance"]
+#                amount   = serializer.validated_data["amount"]
+#                reason   = serializer.validated_data["reason"]
+#
+                
+
+#                try:
+#                    razorpay_amount = int((amount * Decimal(100)).quantize(Decimal("1"),rounding=ROUND_HALF_UP))
+
+#                    razorpay_refund = razorpay_client.payment.refund(payment_instance.provider_payment_id,
+#                                                                    {"amount":razorpay_amount,
+#                                                                      "notes":{"order_id":order_instance.order_id,
+#                                                                               "order_item_ids":[item.id for item in order_items],
+#                                                                               "reason":reason
+#                                                                              }
+#                                                                     }
+#                                                                    )
+            
+#                except razorpay_client.errors.BadRequestError:
+#                    return error_response(message = "Invalid refund request.",
+#                                          status_code = status.HTTP_400_BAD_REQUEST
+#                                         )
+                
+#                except razorpay_client.errors.ServerError:
+#                    return error_response(message = "Razorpay gateway unavailable.",
+#                                          status_code = status.HTTP_502_BAD_GATEWAY
+#                                         )
+                
+                
+                
+#                with transaction.atomic():
+#                    refund_instance = payments_model.RefundModel.objects.create(order      = order_instance,
+#                                                                                payment    = payment_instance,
+#                                                                                amount     = amount,
+#                                                                                currency   = payment_instance.currency,
+#                                                                                method     = payment_instance.method,
+#                                                                                reason     = reason,
+#                                                                                status     = "PENDING",
+#                                                                                provider_refund_id = razorpay_refund["id"],
+#                                                                               )
+#                   
+#                    refund_items = []
+#                    for item in order_items:
+#                        refund_items.append(payments_model.RefundItemModel(refund = refund_instance,
+#                                                                           item   = item,
+#                                                                           status = "PENDING",
+#                                                                           amount = item.total_price
+#                                                                           )
+#                                           )
+                    
+#                    payments_model.RefundItemModel.objects.bulk_create(refund_items)
+
+                    
+
+#                    return success_response(message = "Refund request sent successfuly.",
+#                                            data    = {"refund_id":razorpay_refund["id"],
+#                                                       "amount":refund_instance.amount
+#                                                      },
+#                                            status_code =  status.HTTP_200_OK 
+#                                        )
+
+
+
+#        except drf_serializers.ValidationError as e:
+#            message,data = normalize_validation_errors(e.detail)
+
+#            return error_response(message = message,
+#                                  data    = data,
+#                                  status_code = status.HTTP_400_BAD_REQUEST
+#                                 )

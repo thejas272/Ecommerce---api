@@ -150,8 +150,8 @@ class OrderDetailSuccessResponseSerializer(SuccessResponseSerializer):
 
 
 
-class OrderUpdateSuccessResponseSerializer(SuccessResponseSerializer):
-    data = accounts_serializers.AdminOrderUpdateSerializer()
+#class OrderUpdateSuccessResponseSerializer(SuccessResponseSerializer):
+#    data = accounts_serializers.AdminOrderUpdateSerializer()
 
 
 
@@ -449,8 +449,8 @@ class OrderItemReturnSuccessResponseSerializer(SuccessResponseSerializer):
 
 
 
-class MarkOrderItemReturnSuccessResponseSerializer(SuccessResponseSerializer):
-    data = accounts_serializers.AdminMarkOrderItemReturnedSerializer()
+#class MarkOrderItemReturnSuccessResponseSerializer(SuccessResponseSerializer):
+#    data = accounts_serializers.AdminMarkOrderItemReturnedSerializer()
 
 
 
