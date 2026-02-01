@@ -59,16 +59,9 @@ class PaymentInitiateAPIView(GenericAPIView):
                                   data    = {"order_id":order_id},
                                   status_code = status.HTTP_404_NOT_FOUND
                                  )
+
         
-
-        if order_instance.status == "PAID":
-            return error_response(message = "Order already paid.",
-                                  data    = {"order_id":order_id},
-                                  status_code = status.HTTP_400_BAD_REQUEST
-                                 )
-
-
-        if order_instance.items.filter(status__in=orders_model.OrderItemModel.BLOCKED_STATUSES_PAYMENT).exists():
+        if not order_instance.is_all_items_payable:
             return error_response(message = "Payment cannot be made for this order.",
                                   data    = {"order_id":order_id},
                                   status_code =  status.HTTP_409_CONFLICT
@@ -98,17 +91,16 @@ class PaymentInitiateAPIView(GenericAPIView):
                                             status_code = status.HTTP_200_OK
                                         )
                 
-
-                payment_processing_timeout = timezone.now() - timedelta(minutes=2)
-
-                if payment_instance.processing_started_at:
-                    if payment_instance.processing_started_at >= payment_processing_timeout:
-                        raise drf_serializers.ValidationError({"error_message":"Payment is already being processed.",
-                                                               "data":{"order_id":order_id}
-                                                             })
+                
+                if payment_instance.is_processing:
+                    raise drf_serializers.ValidationError({"error_message":"Payment request is already being processed, try again after some time.",
+                                                           "data":{"order_id":order_id},
+                                                         })                
+                
 
                 payment_instance.processing_started_at = timezone.now()
                 payment_instance.save(update_fields=["processing_started_at"])
+
 
         except drf_serializers.ValidationError as e:
             message,data = normalize_validation_errors(e.detail)
@@ -119,8 +111,6 @@ class PaymentInitiateAPIView(GenericAPIView):
                                  )
         
             
-
-
 
         try:
 
@@ -219,7 +209,7 @@ class PaymentWebhookAPIView(GenericAPIView):
             with transaction.atomic():
                 payment_instance = payments_model.PaymentModel.objects.select_for_update().get(provider_order_id=razorpay_order_id)
 
-                if payment_instance.status in ["SUCCESS","FAILED","REFUNDED"]:    
+                if not payment_instance.is_webhook_mutable:
                     logger.info("Reattempt by webhook", extra={"razorpay_order_id":razorpay_order_id,
                                                                "razorpay_payment_id":razorpay_payment_id,
                                                                "payment_status":payment_instance.status
@@ -229,32 +219,37 @@ class PaymentWebhookAPIView(GenericAPIView):
                 
 
                 order = orders_model.OrderModel.objects.select_for_update().get(id=payment_instance.order.id)
-                order_items = orders_model.OrderItemModel.objects.select_for_update().filter(order=order,status="PENDING")                
+                order_items = orders_model.OrderItemModel.objects.select_for_update().filter(order=order)                
 
 
                 if payment_status == "captured":
+
     
                     payment_instance.status = "SUCCESS"
                     payment_instance.provider_payment_id = razorpay_payment_id
-                    payment_instance.save(update_fields=["status","provider_payment_id"])
-    
+                    payment_instance.payment_confirmation = "CONFIRMED"
+                    payment_instance.save(update_fields=["status","provider_payment_id","payment_confirmation"])
+        
+        
+                    if order.status != "CANCELLED":
 
-                    order.status = "PAID"
-                    order.save(update_fields=["status"])
+                        order.status = "CONFIRMED"
+                        order.save(update_fields=["status"])
 
-                    order_items.update(status="PAID")
+                        order_items.update(status="CONFIRMED")
 
                     logger.info("Payment captured successfuly", extra={"razorpay_order_id":razorpay_order_id,
-                                                                        "razorpay_payment_id":razorpay_payment_id
-                                                                       }
-                               )
+                                                                       "razorpay_payment_id":razorpay_payment_id
+                                                                      }
+                                )
 
                 elif payment_status == "failed":
 
                     payment_instance.status = "FAILED"
                     payment_instance.provider_payment_id = razorpay_payment_id
+                    payment_instance.payment_confirmation = "CONFIRMED"
 
-                    payment_instance.save(update_fields=["status","provider_payment_id"])
+                    payment_instance.save(update_fields=["status","provider_payment_id","payment_confirmation"])
 
                     logger.info("Payment failed", extra={"razorpay_order_id":razorpay_order_id,
                                                          "razorpay_payment_id":razorpay_payment_id
@@ -295,16 +290,11 @@ class PaymentRetryAPIView(GenericAPIView):
             order_instance = orders_model.OrderModel.objects.get(order_id=order_id,user=request.user)        
 
 
-            if order_instance.status == "PAID":
-                raise drf_serializers.ValidationError({"error_message":"Payment already done",
-                                                           "data":{"order_id":order_id}
-                                                         })
-                
-
-            if order_instance.items.filter(status__in=orders_model.OrderItemModel.BLOCKED_STATUSES_PAYMENT).exists():
-                raise drf_serializers.ValidationError({"error_message":"Payment cannot be made for this order",
+            if not order_instance.is_all_items_payable:
+                raise drf_serializers.ValidationError({"error_message":"Payment cannot be made for this order.",
                                                        "data":{"order_id":order_id}
-                                                     })
+                                                     })                
+
 
             with transaction.atomic():
 
@@ -316,35 +306,19 @@ class PaymentRetryAPIView(GenericAPIView):
                                                            "data":{"order_id":order_id}
                                                          })
                 
+                
+                
+                if not prev_payment_instance.can_retry:
+                    raise drf_serializers.ValidationError({"error_message":"Payment cannot be made for this order.",
+                                                           "data":{"order_id":order_id},
+                                                         })  
+                             
 
-                if prev_payment_instance.status == "SUCCESS":
-                    raise drf_serializers.ValidationError({"error_message":"Payment already completed",
+                if prev_payment_instance.is_processing:
+                    raise drf_serializers.ValidationError({"error_message":"Payment is being processed.",
                                                            "data":{"order_id":order_id}
                                                          })
-                
-                
-                if prev_payment_instance.status == "REFUNDED":
-                    raise drf_serializers.ValidationError({"error_message":"Payment was refunded, retry not available",
-                                                           "data":{"order_id":order_id}
-                                                         })
-                
-                
-                cutoff_time = timezone.now() - timedelta(minutes=15)
-                
-                if prev_payment_instance.status == "PENDING":
-                    if prev_payment_instance.created_at >= cutoff_time:
-                        raise drf_serializers.ValidationError({"error_message":"Previous payment is still in progress",
-                                                               "data":{"order_id":order_id}
-                                                             })
-                    
-                
-                payment_processing_timeout = timezone.now() - timedelta(minutes=2)
 
-                if prev_payment_instance.processing_started_at:
-                    if prev_payment_instance.processing_started_at >= payment_processing_timeout:
-                        raise drf_serializers.ValidationError({"error_message":"Payment is being processed.",
-                                                               "data":{"order_id":order_id}
-                                                             })
 
 
                 prev_payment_instance.processing_started_at = timezone.now()
@@ -395,7 +369,7 @@ class PaymentRetryAPIView(GenericAPIView):
             payments_model.PaymentModel.objects.create(order    = order_instance,
                                                        method   = "RAZORPAY",
                                                        status   = "PENDING",
-                                                       amount   = prev_payment_instance.amount,
+                                                       amount   = order_instance.grand_total,
                                                        currency = "INR",
                                                        provider_order_id = razorpay_order["id"]
                                                       )
@@ -452,17 +426,12 @@ class PaymentStatusAPIView(GenericAPIView):
                                  )
         
         payment_instance = order_instance.payments.order_by('-created_at').first()
-
-        cutoff_time = timezone.now() - timedelta(minutes=15)
-        retry_allowed = False
-        if payment_instance.status == "FAILED" or (payment_instance.status == "PENDING" and payment_instance.created_at < cutoff_time):
-            retry_allowed = True 
-
         
+    
         data = {"order_id":order_instance.order_id,
                 "order_status":order_instance.status,
                 "payment_status": payment_instance.status,
-                "retry_allowed": retry_allowed
+                "retry_allowed": payment_instance.can_retry
                }
         
         serializer = self.serializer_class(instance=data)
