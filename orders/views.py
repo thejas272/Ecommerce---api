@@ -217,7 +217,6 @@ class OrderAPIView(APIView):
                                                                     unit_price    = cart_item.unit_price,
                                                                     quantity      = cart_item.quantity,
                                                                     total_price   = cart_item.total_price,
-                                                                    status        = "PENDING"
                                                                     )
                                     )
                 orders_models.OrderItemModel.objects.bulk_create(order_items)
@@ -408,7 +407,7 @@ class OrderReturnAPIView(GenericAPIView):
                                   status_code = status.HTTP_404_NOT_FOUND
                                  )
         
-        serializer = self.serializer_class(instance=order_instance, data={})
+        serializer = self.serializer_class(instance=order_instance, data={}, context={"request":request})
 
         try:
             if serializer.is_valid():
@@ -449,7 +448,7 @@ class OrderItemReturnAPIView(GenericAPIView):
                                   status_code = status.HTTP_404_NOT_FOUND 
                                  )
         
-        serializer = self.serializer_class(instance=order_item, data={})
+        serializer = self.serializer_class(instance=order_item, data={}, context={"request":request})
 
         try:
             if serializer.is_valid():
