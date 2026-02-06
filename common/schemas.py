@@ -148,6 +148,9 @@ class OrderDetailSuccessResponseSerializer(SuccessResponseSerializer):
     data = accounts_serializers.AdminOrderDetailSerializer()
 
 
+class AdminOrderItemUpdateSuccessResponseSerializer(SuccessResponseSerializer):
+    data = accounts_serializers.AdminOrderItemUpdateSerializer()
+
 
 
 #class OrderUpdateSuccessResponseSerializer(SuccessResponseSerializer):

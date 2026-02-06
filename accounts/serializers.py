@@ -528,6 +528,110 @@ class AdminOrderDetailSerializer(serializers.ModelSerializer):
 
 
 
+
+class AdminOrderItemUpdateSerializer(serializers.ModelSerializer):
+    order_id = serializers.CharField(source = "order.order_id", read_only=True) 
+
+    class Meta:
+        model = orders_models.OrderItemModel
+        fields = ["id","status","order_id"]
+        read_only_fields = ["id","order_id"]
+    
+
+    ALLOWED_TRANSITIONS = {"CREATED"  : {"CONFIRMED","CANCELLED"},
+                           "CONFIRMED": {"SHIPPED","CANCELLED"},
+                           "SHIPPED"  : {"DELIVERED"},
+                           "DELIVERED": set(),
+                           "CANCELLED": set(),
+                          }
+
+
+    def validate(self, attrs):
+        
+        if "status" not in attrs:
+            raise serializers.ValidationError({"error_message":"Enter status to continue."})
+
+        status = attrs.get("status")
+    
+
+        if status not in self.ALLOWED_TRANSITIONS[self.instance.status]:
+            raise serializers.ValidationError({"error_message":"Invalid status change request.",
+                                               "data":{"order_item_id":self.instance.id,
+                                                       "current_status":self.instance.status,
+                                                       "proposed_status_change":status
+                                                      }
+                                             }) 
+        
+
+        if self.instance.status == "CREATED" and status == "CONFIRMED":
+
+            payment_instance = self.instance.order.payments.order_by('-created_at').first()
+
+            if not payment_instance:
+                raise serializers.ValidationError({"error_message":"Payment instance not found.",
+                                                   "data":{"order_item_id":self.instance.id,
+                                                           "order_id":self.instance.order.order_id
+                                                          }
+                                                 })
+
+
+
+            if payment_instance.method != "COD":
+                raise serializers.ValidationError({"error_message":"Item cannot be confirmed manually for this payment method.",
+                                                   "data":{"order_item_id":self.instance.id,
+                                                           "current_status":self.instance.status,
+                                                           "proposed_status_change":status,
+                                                           "payment_method":payment_instance.method
+                                                          }
+                                                 })
+            
+        
+        return attrs
+    
+        
+    
+    def update(self, instance, validated_data):
+
+        request = self.context.get("request")
+        if not request or not request.user:
+            raise serializers.ValidationError({"error_message":"Authentication required for this operation."})
+        
+
+        action = "ORDER_ITEM_STATUS_CHANGE"
+        message = ""
+        changes = {}
+
+        for field,new_value in validated_data.items():
+            old_value = getattr(instance,field)
+
+            if old_value != new_value:
+                changes[field] = {"old":old_value,
+                                  "new":new_value
+                                 }
+        
+
+        with transaction.atomic():
+            order_item = super().update(instance, validated_data) 
+    
+            if changes:
+                message = ", ".join(f"{field} of ITEM ID:{instance.id} of {instance.order.order_id} changed from {v['old']} -> {v['new']} by {request.user.username}" for field,v in changes.items())
+                create_audit_log(user=request.user, action=action, instance=order_item, message=message, changes=changes)
+
+            order = order_item.order
+
+            statuses = order.items.values_list("status",flat=True).distinct()
+
+            if len(statuses) == 1:
+                if order.status != statuses[0]:
+                    order.status = statuses[0]
+                    order.save(update_fields=["status"])
+
+        return order_item
+
+
+
+
+
 class AdminOrderPaymentHistorySerializer(serializers.ModelSerializer):
     order_id = serializers.CharField(source="order.order_id",read_only=True)
     
