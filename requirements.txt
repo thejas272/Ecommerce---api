@@ -1,22 +1,27 @@
-Django>=4.2,<5.0
-djangorestframework>=3.14,<4.0
-
-# JWT Authentication
-djangorestframework-simplejwt>=5.3,<6.0
-
-# Swagger / OpenAPI
-drf-yasg>=1.21,<2.0
-
-# PostgreSQL
-psycopg2-binary>=2.9,<3.0
-
-
-# Tree / Hierarchical Data
-django-mptt>=0.15,<1.0
-
-# Environment variables
-python-dotenv>=1.0,<2.0
-
-
-# Payment Gateway
-razorpay>=1.4,<2.0
+asgiref==3.11.0
+certifi==2026.1.4
+charset-normalizer==3.4.4
+Django==6.0
+django-js-asset==3.1.2
+django-mptt==0.18.0
+django-phonenumber-field==8.4.0
+djangorestframework==3.16.1
+djangorestframework_simplejwt==5.5.1
+dotenv==0.9.9
+drf-yasg==1.21.11
+idna==3.11
+inflection==0.5.1
+packaging==25.0
+phonenumbers==9.0.21
+psycopg==3.3.2
+PyJWT==2.10.1
+python-dotenv==1.2.1
+pytz==2025.2
+PyYAML==6.0.3
+razorpay==2.0.0
+requests==2.32.5
+sqlparse==0.5.5
+typing_extensions==4.15.0
+tzdata==2025.3
+uritemplate==4.2.0
+urllib3==2.6.3
